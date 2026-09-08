@@ -34,12 +34,15 @@
     --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  /* смуга прокрутки завжди займає своє місце — інакше при переході між
+     темами різної висоти вся сторінка стрибає на ширину смуги */
+  html{-webkit-text-size-adjust:100%; scrollbar-gutter:stable}
   body{
     margin:0; background:var(--page); color:var(--body);
     font-family:var(--sans); font-size:17px; line-height:1.68;
     -webkit-font-smoothing:antialiased;
   }
+  ::selection{background:var(--i-soft); color:var(--ink)}
   .wrap{
     max-width:820px; margin:40px auto 60px; background:var(--card);
     border:1px solid #dbe1e9; border-radius:16px;
@@ -50,22 +53,28 @@
     body{font-size:16px}
     .wrap{margin:0; border-radius:0; border-left:0; border-right:0; padding:4px 18px 48px}
   }
-  p,ul,table,.task,.callout{max-width:64ch}
+  /* Читабельна довжина рядка — для статей. На головній цього обмеження бути не
+     має: там текстові блоки мусять тягнутись на всю ширину, як сітка карток. */
+  .wrap :is(p,ul,table,.task,.callout){max-width:64ch}
+  /* balance у заголовках рівняє довжину рядків, pretty в абзацах прибирає
+     самотнє слово на останньому рядку */
   h1{
     font-family:var(--display); font-size:clamp(2.2rem,6vw,3rem); line-height:1.06;
     letter-spacing:-.025em; font-weight:700; color:var(--ink); margin:0 0 .3em;
+    text-wrap:balance;
   }
   h2{
     font-family:var(--display); font-size:1.72rem; line-height:1.2; letter-spacing:-.018em;
     font-weight:700; color:var(--ink); margin:3.2em 0 .5em; padding-top:.6em; position:relative;
+    text-wrap:balance;
   }
   h2::before{content:""; position:absolute; top:0; left:0; width:34px; height:3px;
     background:var(--i); border-radius:2px}
   h3{font-family:var(--display); font-size:1.2rem; font-weight:600; color:var(--ink);
-    letter-spacing:-.01em; margin:2.2em 0 .4em}
+    letter-spacing:-.01em; margin:2.2em 0 .4em; text-wrap:balance}
   header.top{padding:52px 0 4px}
-  p{margin:0 0 1.15em}
-  .lede{font-size:1.15rem; line-height:1.6; color:#3d4650}
+  p{margin:0 0 1.15em; text-wrap:pretty}
+  .lede{font-size:1.15rem; line-height:1.6; color:#3d4650; text-wrap:pretty}
   .muted{color:var(--muted)}
   b,strong{font-weight:600; color:var(--ink)}
   em{color:#3d4650}
@@ -103,6 +112,7 @@
   .seg button{font-family:var(--sans); font-size:.85rem; padding:6px 12px; border:0; background:#fff;
     color:var(--muted); cursor:pointer}
   .seg button+button{border-left:1px solid var(--rule)}
+  .seg button:hover:not([aria-pressed=true]){background:var(--panel-2); color:var(--ink)}
   .seg button[aria-pressed=true]{background:var(--ink); color:#fff}
 
   .panes{display:grid; grid-template-columns:1.1fr .9fr; background:#fff}
@@ -122,7 +132,9 @@
   .cl .kw{color:#9333a8; font-weight:500} .cl .fn{color:#2563c9} .cl .num{color:#a35a00}
   .cl .str,.cl .lit{color:#227a4d} .cl .cmt{color:#98a2ae}
 
-  .chips{display:flex; flex-wrap:wrap; gap:8px; min-height:36px; margin-bottom:14px}
+  /* position:relative — щоб програвач міг заміряти найвищий кадр (див. lockHeight) */
+  .chips{display:flex; flex-wrap:wrap; gap:8px; min-height:36px; margin-bottom:14px;
+    position:relative}
   .chip{font-family:var(--mono); font-size:.84rem; padding:5px 11px; border-radius:7px;
     border:1px solid var(--rule); background:#fff; color:var(--muted)}
   .chip.i{border-color:#b9a2f5; background:var(--i-soft); color:var(--i)}
@@ -132,14 +144,20 @@
   .chip.pop{animation:pop .22s ease}
   @keyframes pop{from{transform:scale(.9)}to{transform:scale(1)}}
 
-  .out{font-family:var(--mono); font-size:.83rem; line-height:1.6; background:#161b22; color:#e6edf3;
-    border-radius:9px; padding:11px 13px; min-height:78px; max-height:190px; overflow:auto; white-space:pre}
+  /* Висота консолі стала: її задає програвач через --out-lines (3…9 рядків) за
+     найдовшим кадром. Раніше блок ріс від min- до max-height просто під час
+     анімації — і весь текст під віджетом стрибав. */
+  .out{--out-lines:4; font-family:var(--mono); font-size:.83rem; line-height:1.6;
+    background:#161b22; color:#e6edf3; border-radius:9px; padding:11px 13px;
+    height:calc(var(--out-lines) * 1.6em + 22px);
+    overflow:auto; scrollbar-gutter:stable; white-space:pre}
   .out .ln{opacity:.55}
   .out .ln.last{opacity:1; color:#ffd479}
   .out .empty{opacity:.45; font-style:italic}
 
   /* ---------- extras ---------- */
-  .extra{padding:14px 16px; border-top:1px solid var(--rule-soft); background:#fff}
+  .extra{padding:14px 16px; border-top:1px solid var(--rule-soft); background:#fff;
+    position:relative}
   .grid{display:inline-grid; gap:6px}
   .gc{width:36px;height:36px;border-radius:7px;border:1.5px solid var(--rule);background:#fff;
     display:grid;place-items:center;font-family:var(--mono);font-size:.68rem;color:#b3bcc7;
@@ -157,21 +175,24 @@
 
   .note{padding:13px 16px; border-top:1px solid var(--rule-soft); background:var(--panel);
     font-size:.95rem; line-height:1.55; color:#3a434e; min-height:60px;
-    display:flex; align-items:center; gap:10px}
+    display:flex; align-items:center; gap:10px; position:relative}
   .note .dot{width:9px;height:9px;border-radius:50%;background:var(--i);flex:none}
   .note.inner .dot{background:var(--j)}
   .note.end .dot{background:var(--stop)}
 
-  .controls{display:flex; align-items:center; gap:9px; padding:11px 16px;
+  /* flex-wrap — щоб на вузькому екрані повзунок і лічильник переносились
+     на другий рядок, а не тиснули кнопки до нечитабельної ширини */
+  .controls{display:flex; align-items:center; flex-wrap:wrap; gap:9px; padding:11px 16px;
     border-top:1px solid var(--rule); background:var(--panel-2)}
   button.ctl{font-family:var(--sans); font-size:.9rem; padding:7px 14px; border:1px solid var(--rule);
     background:#fff; border-radius:8px; cursor:pointer; color:var(--ink)}
   button.ctl:hover{background:#eef2f7}
-  button.ctl:disabled{opacity:.4; cursor:default}
+  button.ctl:active:not(:disabled){transform:translateY(1px)}
+  button.ctl:disabled{opacity:.4; cursor:default; transform:none}
   button.ctl.primary{background:var(--ink); color:#fff; border-color:var(--ink); min-width:108px}
   button.ctl.primary:hover{background:#2b333d}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--i); outline-offset:2px}
-  input[type=range]{flex:1; accent-color:var(--i); min-width:60px}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--i); outline-offset:2px}
+  input[type=range]{flex:1; accent-color:var(--i); min-width:120px}
   .counter{font-family:var(--mono); font-size:.76rem; color:var(--muted); white-space:nowrap}
 
   /* ---------- blocks ---------- */
@@ -320,7 +341,12 @@
     position:fixed; top:0; left:0; bottom:0; width:var(--sbw); z-index:40;
     background:#fff; border-right:1px solid #dbe1e9; display:flex; flex-direction:column;
     overflow-y:auto; overscroll-behavior:contain;
+    scrollbar-width:thin; scrollbar-color:#cfd6e0 transparent;
   }
+  .sidebar::-webkit-scrollbar{width:9px}
+  .sidebar::-webkit-scrollbar-thumb{background:#d5dbe4; border-radius:5px;
+    border:2px solid #fff}
+  .sidebar:hover::-webkit-scrollbar-thumb{background:#c2cad6}
   body[data-route=home] .sidebar,
   body[data-route=home] .topbar,
   body[data-route=home] .progress{display:none}
@@ -385,11 +411,16 @@
   }
 
   /* ---------- головна ---------- */
+  /* Єдине джерело ширини на головній — сам .home. Заголовок, підзаголовок,
+     сітка карток і нотатка внизу є його прямими дітьми й не мають власних
+     обмежень, тому їхні ліві та праві краї збігаються рівно. */
   .home{max-width:1060px; margin:0 auto; padding:78px 26px 96px}
-  .home-hero{max-width:44rem}
+  .home-hero{max-width:none}
   .home-hero h1{font-family:var(--display); font-weight:700; letter-spacing:-.03em;
-    font-size:clamp(2.5rem,7vw,3.7rem); line-height:1.02; color:var(--ink); margin:0 0 .32em}
-  .home-hero .lede{font-size:1.16rem; line-height:1.6; color:#3d4650; max-width:60ch}
+    font-size:clamp(2.5rem,7vw,3.7rem); line-height:1.02; color:var(--ink); margin:0 0 .32em;
+    text-wrap:balance}
+  .home-hero .lede{font-size:1.16rem; line-height:1.6; color:#3d4650; max-width:none;
+    text-wrap:pretty}
   .home-hero .lede b{color:var(--ink)}
 
   .home-sec{display:flex; align-items:baseline; gap:14px; margin:58px 0 6px}
@@ -397,13 +428,17 @@
     letter-spacing:-.015em}
   .home-sec span{font-size:.84rem; color:var(--muted)}
 
-  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(296px,1fr)); gap:22px; margin-top:22px}
+  /* min(296px,100%) — інакше на вузькому екрані колонка лишається 296px
+     завширшки і сітка вилазить за край, даючи горизонтальну прокрутку */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(296px,100%),1fr));
+    gap:22px; margin-top:22px}
   .card{display:flex; flex-direction:column; text-decoration:none; color:inherit; background:var(--card);
     border:1px solid #dbe1e9; border-radius:16px; overflow:hidden;
     box-shadow:0 1px 2px rgba(20,30,45,.05), 0 12px 30px -22px rgba(20,30,45,.35);
     transition:transform .28s cubic-bezier(.2,.8,.3,1), box-shadow .28s, border-color .2s}
   .card:hover{transform:translateY(-5px); border-color:#c3cbd7;
     box-shadow:0 2px 4px rgba(20,30,45,.06), 0 26px 48px -26px rgba(20,30,45,.5)}
+  .card:active{transform:translateY(-1px); transition-duration:.08s}
   .card:focus-visible{outline:2px solid var(--i); outline-offset:3px}
   .card-viz{background:var(--panel); border-bottom:1px solid var(--rule-soft); padding:8px 10px 4px}
   .card-viz svg{display:block; width:100%; height:auto}
@@ -420,8 +455,15 @@
   .card:hover .card-go em{transform:translateX(5px)}
 
   .home-note{margin-top:52px; border-left:3px solid var(--i); background:var(--i-soft);
-    padding:16px 20px; border-radius:0 10px 10px 0; font-size:.96rem; max-width:64ch}
-  .home-note p{margin:0}
+    padding:16px 20px; border-radius:0 10px 10px 0; font-size:.96rem; max-width:none}
+  .home-note p{margin:0; max-width:none; text-wrap:pretty}
+
+  @media (max-width:720px){
+    .home{padding:40px 18px 64px}      /* 78px згори на телефоні — задарма */
+    .home-sec{margin-top:40px}
+    .home-note{margin-top:36px}
+    .cards{gap:16px}
+  }
 
   /* поява карток */
   .reveal{opacity:0; transform:translateY(16px)}
@@ -557,7 +599,6 @@
   .cell.ghost{border-style:dashed; background:var(--panel); color:#b3bcc7}
   .cell.fresh{animation:pop .3s ease}
   .cellw .ix{font-family:var(--mono); font-size:.67rem; color:#9aa4b0; margin-top:4px}
-  .cellw .nix{font-family:var(--mono); font-size:.63rem; color:#c2c9d3; line-height:1.3}
   .cellw.on .ix{color:var(--i); font-weight:700}
   .vizrow{display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; flex-wrap:wrap}
   .vizrow:last-child{margin-bottom:0}
@@ -595,7 +636,6 @@
   .bar.now{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700}
   .barlab{font-family:var(--mono); font-size:.7rem; color:var(--muted); max-width:66px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .barw.moved .bar{animation:pop .3s ease}
 
   /* ---------- акумулятор ---------- */
   .accrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:11px}
@@ -1852,6 +1892,27 @@ const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 window.PageInit = {};           /* сюди реєструються скрипти окремих тем */
 const started = {};             /* які теми вже ініціалізовані */
 
+/* ============================ зупинка анімацій ============================ */
+/* Сторінки не видаляються з DOM, а лише ховаються, тому їхні таймери треба
+   гасити вручну. Інакше анімація крутиться на схованій сторінці, а таймери
+   різних тем накладаються один на одний. */
+const anims = [];               /* {el, stop, start} кожної анімованої вставки */
+window.registerAnim = (a) => { anims.push(a); };
+
+function stopPageAnims(){
+  anims.forEach(a=>{ try{ a.stop(); }catch(err){ console.error("не зупинилась анімація", err); } });
+  if(window.CollKit && window.CollKit.stopAllPlayers) window.CollKit.stopAllPlayers();
+}
+/* заводимо лише те, що лежить на щойно показаній сторінці */
+function startPageAnims(){
+  if(reduced) return;
+  anims.forEach(a=>{
+    if(!a.start || !a.el || !a.el.isConnected) return;
+    if(a.el.closest(".page[hidden]")) return;
+    try{ a.start(); }catch(err){ console.error("не запустилась анімація", err); }
+  });
+}
+
 const $  = (s,r) => (r||document).querySelector(s);
 const $$ = (s,r) => [...(r||document).querySelectorAll(s)];
 
@@ -1937,6 +1998,8 @@ function render(){
   const route = FLAT.find(r=>r.slug===slug) || null;
   activeRoute = route;
 
+  stopPageAnims();              /* спершу гасимо те, що анімувалось досі */
+
   $$(".page").forEach(p=>{ p.hidden = true; });
   document.getElementById(route ? route.id : "page-home").hidden = false;
 
@@ -1967,6 +2030,7 @@ function render(){
   closeMenu();
   window.scrollTo(0, 0);
   homeAnim(!route);
+  startPageAnims();
   updateProgress();
 }
 
@@ -2005,7 +2069,9 @@ function cycler(steps){
   }
   return {
     start(){ if(timer || reduced) return; tick(); },
-    stop(){ clearTimeout(timer); timer = null; },
+    /* i скидаємо, щоб повернення на головну починало показ з початку,
+       а не з середини перерваного циклу */
+    stop(){ clearTimeout(timer); timer = null; i = 0; },
     once(){ steps.forEach(s=>s.run()); }
   };
 }
@@ -2091,8 +2157,19 @@ function vizLoop(svg){
     nums[j].setAttribute("class","vz-cn" + (cls ? " " + cls : ""));
   });
 
+  /* Маркер має transition:transform, тому просте скидання на початок
+     проганяло б його назад через увесь рядок. Знімаємо перехід, ставимо
+     нуль, форсуємо reflow — і лише потім вертаємо перехід. */
+  function resetMark(){
+    mark.classList.remove("on");
+    mark.style.transition = "none";
+    mark.style.transform = "translateX(0px)";
+    void mark.getBoundingClientRect();
+    mark.style.transition = "";
+  }
+
   const steps = [{ d:700, run(){
-      paint(-1); mark.classList.remove("on");
+      paint(-1); resetMark();
       line.innerHTML = 'i = <tspan class="hi">?</tspan> → цикл ще не почався';
     }}];
   for(let k = 0; k < N; k++){
@@ -2104,7 +2181,7 @@ function vizLoop(svg){
     }});
   }
   steps.push({ d:1700, run(){
-    paint(N); mark.classList.remove("on");
+    paint(N); resetMark();
     line.innerHTML = 'цикл завершено — тіло виконалось <tspan class="hi">8</tspan> разів';
   }});
   return cycler(steps);
@@ -2207,105 +2284,8 @@ function hl(line){
 }
 
 /* ================= player ================= */
-function createPlayer(root, spec){
-  root.innerHTML = `
-    ${spec.config ? `<div class="w-config">${spec.config}</div>` : ""}
-    <div class="panes">
-      <div class="pane">
-        <div class="pane-title">Код</div>
-        <pre class="code" data-code></pre>
-      </div>
-      <div class="pane">
-        <div class="pane-title">Змінні зараз</div>
-        <div class="chips" data-chips></div>
-        <div class="pane-title">Вивід</div>
-        <div class="out" data-out></div>
-      </div>
-    </div>
-    ${spec.extra ? `<div class="extra" data-extra></div>` : ""}
-    <div class="note" data-note><span class="dot"></span><span data-notetext></span></div>
-    <div class="controls">
-      <button class="ctl primary" data-play>Запустити</button>
-      <button class="ctl" data-back>Назад</button>
-      <button class="ctl" data-step>Крок</button>
-      <input type="range" min="0" max="1" value="0" data-scrub aria-label="Крок виконання">
-      <span class="counter" data-counter></span>
-    </div>`;
-
-  const $ = (s) => root.querySelector(s);
-  const codeEl=$("[data-code]"), chipsEl=$("[data-chips]"), outEl=$("[data-out]"),
-        noteEl=$("[data-note]"), noteTx=$("[data-notetext]"), extraEl=$("[data-extra]"),
-        playB=$("[data-play]"), backB=$("[data-back]"), stepB=$("[data-step]"),
-        scrub=$("[data-scrub]"), counter=$("[data-counter]");
-
-  let frames=[], code=[], idx=0, timer=null, prevChips=null;
-
-  function rebuild(){
-    const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
-    code = built.code; frames = built.frames;
-    idx = 0; prevChips = null; scrub.max = frames.length-1; scrub.value = 0;
-    codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${hl(l)||"&nbsp;"}</span>`).join("");
-    render();
-  }
-
-  function render(){
-    const f = frames[idx];
-    codeEl.querySelectorAll(".cl").forEach(el=>{
-      el.classList.toggle("active", Number(el.dataset.l)===f.line);
-    });
-    const chipHtml = (f.vars||[]).map(v=>`<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("");
-    if(chipHtml!==prevChips){
-      chipsEl.innerHTML = chipHtml || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
-      chipsEl.querySelectorAll(".chip").forEach(c=>c.classList.add("pop"));
-      prevChips = chipHtml;
-    }
-    const out = f.out||[];
-    outEl.innerHTML = out.length
-      ? out.map((l,k)=>`<div class="ln ${k===out.length-1?"last":""}">${esc(l)||" "}</div>`).join("")
-      : `<div class="empty">консоль порожня</div>`;
-    outEl.scrollTop = outEl.scrollHeight;
-    noteTx.textContent = f.note||"";
-    noteEl.className = "note" + (f.kind?" "+f.kind:"");
-    if(extraEl) extraEl.innerHTML = spec.extra(f);
-    scrub.value = idx;
-    counter.textContent = `${idx+1} / ${frames.length}`;
-    backB.disabled = idx===0;
-    stepB.disabled = idx===frames.length-1;
-  }
-
-  function go(n){ idx = Math.max(0, Math.min(frames.length-1, n)); render(); }
-  function stop(){ clearInterval(timer); timer=null; playB.textContent="Запустити"; }
-  function play(){
-    if(timer){ stop(); return; }
-    if(idx===frames.length-1) idx=0;
-    playB.textContent="Пауза";
-    timer = setInterval(()=>{
-      if(idx>=frames.length-1){ stop(); return; }
-      go(idx+1);
-    }, 620);
-  }
-
-  playB.onclick = play;
-  stepB.onclick = ()=>{ stop(); go(idx+1); };
-  backB.onclick = ()=>{ stop(); go(idx-1); };
-  scrub.oninput = ()=>{ stop(); go(Number(scrub.value)); };
-  root.addEventListener("keydown", e=>{
-    if(e.key==="ArrowRight"){ stop(); go(idx+1); e.preventDefault(); }
-    if(e.key==="ArrowLeft"){ stop(); go(idx-1); e.preventDefault(); }
-  });
-  root.querySelectorAll("[data-cfg]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{ stop(); rebuild(); });
-  });
-  root.querySelectorAll("[data-mode]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      root.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed","false"));
-      btn.setAttribute("aria-pressed","true");
-      stop(); rebuild();
-    });
-  });
-
-  rebuild();
-}
+const createPlayer = window.CollKit.makePlayer({ hl, tick:620 });
+const { numCfg, modeCfg } = window.CollKit;
 
 /* ================= рендер коробок ================= */
 function drawBoxes(list, hint){
@@ -2320,7 +2300,7 @@ function drawBoxes(list, hint){
       <div class="boxname">${esc(b.name)}</div>
       ${b.type?`<div class="boxtype">${esc(b.type)}</div>`:""}
     </div>`).join("")}</div>`;
-  return html + (hint?`<div class="boxhint">${hint}</div>`:"");
+  return html + (hint?`<div class="boxhint">${esc(hint)}</div>`:"");
 }
 const typeOf = (v) => typeof v === "string" ? "str" : (Number.isInteger(v) ? "int" : "float");
 const show = (v) => typeof v === "string" ? `"${v}"` : String(v);
@@ -2397,7 +2377,7 @@ createPlayer(document.getElementById("vars-w-swap"), {
       <button data-mode="ok" aria-pressed="true">Через temp</button>
       <button data-mode="bad" aria-pressed="false">Навпростець</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const B=(x,y,t,opts={})=>{
       const arr=[
@@ -2517,7 +2497,7 @@ createPlayer(document.getElementById("vars-w-types"), {
       <button data-mode="str" aria-pressed="false">Рядки</button>
       <button data-mode="mix" aria-pressed="false">Мішанина</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const cfg = {
       num:{a:2, b:3, av:"2", bv:"3", at:"int", bt:"int", res:"5",
@@ -2563,7 +2543,7 @@ createPlayer(document.getElementById("vars-w-input"), {
     <label>вводять ім'я <input type="text" data-cfg id="vars-in-n" value="Оля" spellcheck="false"></label>
     <label>вводять вік <input type="text" data-cfg id="vars-in-a" value="16" spellcheck="false"></label>`,
   readCfg:(r)=>({
-    mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode,
+    mode:modeCfg(r),
     n:r.querySelector("#vars-in-n").value || "Оля",
     a:r.querySelector("#vars-in-a").value || "16"
   }),
@@ -2657,7 +2637,14 @@ createPlayer(document.getElementById("vars-w-input"), {
   }
   btn.onclick = run;
   box.innerHTML = drawBoxes(steps[0].b);
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 600);
+  let auto = null;
+  /* запуск і зупинку веде роутер: сторінки лишаються в DOM, тому анімацію
+     схованої теми треба гасити, а при повторному заході — заводити знову */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
 })();
 
 };
@@ -2680,105 +2667,8 @@ function hl(line){
 }
 
 /* ================= player ================= */
-function createPlayer(root, spec){
-  root.innerHTML = `
-    ${spec.config ? `<div class="w-config">${spec.config}</div>` : ""}
-    <div class="panes">
-      <div class="pane">
-        <div class="pane-title">Код</div>
-        <pre class="code" data-code></pre>
-      </div>
-      <div class="pane">
-        <div class="pane-title">Змінні зараз</div>
-        <div class="chips" data-chips></div>
-        <div class="pane-title">Вивід</div>
-        <div class="out" data-out></div>
-      </div>
-    </div>
-    ${spec.extra ? `<div class="extra" data-extra></div>` : ""}
-    <div class="note" data-note><span class="dot"></span><span data-notetext></span></div>
-    <div class="controls">
-      <button class="ctl primary" data-play>Запустити</button>
-      <button class="ctl" data-back>Назад</button>
-      <button class="ctl" data-step>Крок</button>
-      <input type="range" min="0" max="1" value="0" data-scrub aria-label="Крок виконання">
-      <span class="counter" data-counter></span>
-    </div>`;
-
-  const $ = (s) => root.querySelector(s);
-  const codeEl=$("[data-code]"), chipsEl=$("[data-chips]"), outEl=$("[data-out]"),
-        noteEl=$("[data-note]"), noteTx=$("[data-notetext]"), extraEl=$("[data-extra]"),
-        playB=$("[data-play]"), backB=$("[data-back]"), stepB=$("[data-step]"),
-        scrub=$("[data-scrub]"), counter=$("[data-counter]");
-
-  let frames=[], code=[], idx=0, timer=null, prevChips=null;
-
-  function rebuild(){
-    const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
-    code = built.code; frames = built.frames;
-    idx = 0; prevChips = null; scrub.max = frames.length-1; scrub.value = 0;
-    codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${hl(l)||"&nbsp;"}</span>`).join("");
-    render();
-  }
-
-  function render(){
-    const f = frames[idx];
-    codeEl.querySelectorAll(".cl").forEach(el=>{
-      el.classList.toggle("active", Number(el.dataset.l)===f.line);
-    });
-    const chipHtml = (f.vars||[]).map(v=>`<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("");
-    if(chipHtml!==prevChips){
-      chipsEl.innerHTML = chipHtml || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
-      chipsEl.querySelectorAll(".chip").forEach(c=>c.classList.add("pop"));
-      prevChips = chipHtml;
-    }
-    const out = f.out||[];
-    outEl.innerHTML = out.length
-      ? out.map((l,k)=>`<div class="ln ${k===out.length-1?"last":""}">${esc(l)||" "}</div>`).join("")
-      : `<div class="empty">консоль порожня</div>`;
-    outEl.scrollTop = outEl.scrollHeight;
-    noteTx.textContent = f.note||"";
-    noteEl.className = "note" + (f.kind?" "+f.kind:"");
-    if(extraEl) extraEl.innerHTML = spec.extra(f);
-    scrub.value = idx;
-    counter.textContent = `${idx+1} / ${frames.length}`;
-    backB.disabled = idx===0;
-    stepB.disabled = idx===frames.length-1;
-  }
-
-  function go(n){ idx = Math.max(0, Math.min(frames.length-1, n)); render(); }
-  function stop(){ clearInterval(timer); timer=null; playB.textContent="Запустити"; }
-  function play(){
-    if(timer){ stop(); return; }
-    if(idx===frames.length-1) idx=0;
-    playB.textContent="Пауза";
-    timer = setInterval(()=>{
-      if(idx>=frames.length-1){ stop(); return; }
-      go(idx+1);
-    }, 620);
-  }
-
-  playB.onclick = play;
-  stepB.onclick = ()=>{ stop(); go(idx+1); };
-  backB.onclick = ()=>{ stop(); go(idx-1); };
-  scrub.oninput = ()=>{ stop(); go(Number(scrub.value)); };
-  root.addEventListener("keydown", e=>{
-    if(e.key==="ArrowRight"){ stop(); go(idx+1); e.preventDefault(); }
-    if(e.key==="ArrowLeft"){ stop(); go(idx-1); e.preventDefault(); }
-  });
-  root.querySelectorAll("[data-cfg]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{ stop(); rebuild(); });
-  });
-  root.querySelectorAll("[data-mode]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      root.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed","false"));
-      btn.setAttribute("aria-pressed","true");
-      stop(); rebuild();
-    });
-  });
-
-  rebuild();
-}
+const createPlayer = window.CollKit.makePlayer({ hl, tick:620 });
+const { numCfg, modeCfg } = window.CollKit;
 
 /* ================= гілки ================= */
 function ladder(branches){
@@ -2878,7 +2768,7 @@ function chain({code, setupLine, vars, branches, elseBr, tail}){
 /* ================= 2. тільки if ================= */
 createPlayer(document.getElementById("cond-w-if"), {
   config:`<label>temp <input type="number" data-cfg id="cond-if-t" value="25" min="-20" max="45"></label>`,
-  readCfg:(r)=>({t:Number(r.querySelector("#cond-if-t").value)||0}),
+  readCfg:(r)=>({t:numCfg(r,"#cond-if-t",25)}),
   build:({t})=>chain({
     code:[`temp = ${t}`,`if temp > 20:`,`    print("Тепло, беремо футболку")`,``,`print("Гарного дня!")`],
     setupLine:0,
@@ -2892,7 +2782,7 @@ createPlayer(document.getElementById("cond-w-if"), {
 /* ================= 3. if / else ================= */
 createPlayer(document.getElementById("cond-w-ifelse"), {
   config:`<label>age <input type="number" data-cfg id="cond-ie-a" value="16" min="0" max="99"></label>`,
-  readCfg:(r)=>({a:Number(r.querySelector("#cond-ie-a").value)||0}),
+  readCfg:(r)=>({a:numCfg(r,"#cond-ie-a",16)}),
   build:({a})=>chain({
     code:[`age = ${a}`,`if age >= 18:`,`    print("Можна голосувати")`,`else:`,`    print("Ще зарано")`],
     setupLine:0,
@@ -2906,7 +2796,7 @@ createPlayer(document.getElementById("cond-w-ifelse"), {
 /* ================= 4. ланцюжок elif ================= */
 createPlayer(document.getElementById("cond-w-elif"), {
   config:`<label>score <input type="number" data-cfg id="cond-el-s" value="85" min="0" max="100"></label>`,
-  readCfg:(r)=>({s:Math.max(0,Math.min(100,Number(r.querySelector("#cond-el-s").value)||0))}),
+  readCfg:(r)=>({s:numCfg(r,"#cond-el-s",85)}),
   build:({s})=>chain({
     code:[`score = ${s}`,
       `if score >= 90:`,`    print("Відмінно")`,
@@ -2933,8 +2823,8 @@ createPlayer(document.getElementById("cond-w-vs"), {
     </span>
     <label>score <input type="number" data-cfg id="cond-vs-s" value="95" min="0" max="100"></label>`,
   readCfg:(r)=>({
-    mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode,
-    s:Math.max(0,Math.min(100,Number(r.querySelector("#cond-vs-s").value)||0))
+    mode:modeCfg(r),
+    s:numCfg(r,"#cond-vs-s",95)
   }),
   build:({mode,s})=>{
     const defs=[
@@ -2989,7 +2879,7 @@ createPlayer(document.getElementById("cond-w-logic"), {
       <label class="switch"><input type="checkbox" data-cfg id="cond-lg-b"> є паспорт</label>
     </span>`,
   readCfg:(r)=>({
-    mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode,
+    mode:modeCfg(r),
     a:r.querySelector("#cond-lg-a").checked,
     b:r.querySelector("#cond-lg-b").checked
   }),
@@ -3034,8 +2924,8 @@ createPlayer(document.getElementById("cond-w-nested"), {
   config:`<label>age <input type="number" data-cfg id="cond-nt-a" value="16" min="0" max="99"></label>
     <label>money <input type="number" data-cfg id="cond-nt-m" value="200" min="0" max="999"></label>`,
   readCfg:(r)=>({
-    a:Number(r.querySelector("#cond-nt-a").value)||0,
-    m:Number(r.querySelector("#cond-nt-m").value)||0
+    a:numCfg(r,"#cond-nt-a",16),
+    m:numCfg(r,"#cond-nt-m",200)
   }),
   build:({a,m})=>{
     const code=[`age = ${a}`,`money = ${m}`,
@@ -3128,7 +3018,13 @@ createPlayer(document.getElementById("cond-w-nested"), {
   }
   btn.onclick = run;
   draw(["pending","pending","pending"]);
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 700);
+  let auto = null;
+  /* запуск і зупинку веде роутер — див. registerAnim */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 700); }
+  });
 })();
 
 };
@@ -3151,105 +3047,8 @@ function hl(line){
 }
 
 /* ================= player ================= */
-function createPlayer(root, spec){
-  root.innerHTML = `
-    ${spec.config ? `<div class="w-config">${spec.config}</div>` : ""}
-    <div class="panes">
-      <div class="pane">
-        <div class="pane-title">Код</div>
-        <pre class="code" data-code></pre>
-      </div>
-      <div class="pane">
-        <div class="pane-title">Змінні зараз</div>
-        <div class="chips" data-chips></div>
-        <div class="pane-title">Вивід</div>
-        <div class="out" data-out></div>
-      </div>
-    </div>
-    ${spec.extra ? `<div class="extra" data-extra></div>` : ""}
-    <div class="note" data-note><span class="dot"></span><span data-notetext></span></div>
-    <div class="controls">
-      <button class="ctl primary" data-play>Запустити</button>
-      <button class="ctl" data-back>Назад</button>
-      <button class="ctl" data-step>Крок</button>
-      <input type="range" min="0" max="1" value="0" data-scrub aria-label="Крок виконання">
-      <span class="counter" data-counter></span>
-    </div>`;
-
-  const $ = (s) => root.querySelector(s);
-  const codeEl=$("[data-code]"), chipsEl=$("[data-chips]"), outEl=$("[data-out]"),
-        noteEl=$("[data-note]"), noteTx=$("[data-notetext]"), extraEl=$("[data-extra]"),
-        playB=$("[data-play]"), backB=$("[data-back]"), stepB=$("[data-step]"),
-        scrub=$("[data-scrub]"), counter=$("[data-counter]");
-
-  let frames=[], code=[], idx=0, timer=null, prevChips=null;
-
-  function rebuild(){
-    const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
-    code = built.code; frames = built.frames;
-    idx = 0; prevChips = null; scrub.max = frames.length-1; scrub.value = 0;
-    codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${hl(l)||"&nbsp;"}</span>`).join("");
-    render();
-  }
-
-  function render(){
-    const f = frames[idx];
-    codeEl.querySelectorAll(".cl").forEach(el=>{
-      el.classList.toggle("active", Number(el.dataset.l)===f.line);
-    });
-    const chipHtml = (f.vars||[]).map(v=>`<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("");
-    if(chipHtml!==prevChips){
-      chipsEl.innerHTML = chipHtml || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
-      chipsEl.querySelectorAll(".chip").forEach(c=>c.classList.add("pop"));
-      prevChips = chipHtml;
-    }
-    const out = f.out||[];
-    outEl.innerHTML = out.length
-      ? out.map((l,k)=>`<div class="ln ${k===out.length-1?"last":""}">${esc(l)||" "}</div>`).join("")
-      : `<div class="empty">консоль порожня</div>`;
-    outEl.scrollTop = outEl.scrollHeight;
-    noteTx.textContent = f.note||"";
-    noteEl.className = "note" + (f.kind?" "+f.kind:"");
-    if(extraEl) extraEl.innerHTML = spec.extra(f);
-    scrub.value = idx;
-    counter.textContent = `${idx+1} / ${frames.length}`;
-    backB.disabled = idx===0;
-    stepB.disabled = idx===frames.length-1;
-  }
-
-  function go(n){ idx = Math.max(0, Math.min(frames.length-1, n)); render(); }
-  function stop(){ clearInterval(timer); timer=null; playB.textContent="Запустити"; }
-  function play(){
-    if(timer){ stop(); return; }
-    if(idx===frames.length-1) idx=0;
-    playB.textContent="Пауза";
-    timer = setInterval(()=>{
-      if(idx>=frames.length-1){ stop(); return; }
-      go(idx+1);
-    }, 620);
-  }
-
-  playB.onclick = play;
-  stepB.onclick = ()=>{ stop(); go(idx+1); };
-  backB.onclick = ()=>{ stop(); go(idx-1); };
-  scrub.oninput = ()=>{ stop(); go(Number(scrub.value)); };
-  root.addEventListener("keydown", e=>{
-    if(e.key==="ArrowRight"){ stop(); go(idx+1); e.preventDefault(); }
-    if(e.key==="ArrowLeft"){ stop(); go(idx-1); e.preventDefault(); }
-  });
-  root.querySelectorAll("[data-cfg]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{ stop(); rebuild(); });
-  });
-  root.querySelectorAll("[data-mode]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      root.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed","false"));
-      btn.setAttribute("aria-pressed","true");
-      stop(); rebuild();
-    });
-  });
-
-  rebuild();
-}
+const createPlayer = window.CollKit.makePlayer({ hl, tick:620 });
+const { numCfg, modeCfg } = window.CollKit;
 
 /* ================= 1. for + range ================= */
 createPlayer(document.getElementById("loops-w-range"), {
@@ -3258,9 +3057,9 @@ createPlayer(document.getElementById("loops-w-range"), {
     <label>стоп <input type="number" data-cfg id="loops-rg-stop" value="5" min="-10" max="30"></label>
     <label>крок <input type="number" data-cfg id="loops-rg-step" value="1" min="-5" max="5"></label>`,
   readCfg:(r)=>({
-    start:Number(r.querySelector("#loops-rg-start").value)||0,
-    stop:Number(r.querySelector("#loops-rg-stop").value)||0,
-    step:Number(r.querySelector("#loops-rg-step").value)||1
+    start:numCfg(r,"#loops-rg-start",0),
+    stop: numCfg(r,"#loops-rg-stop",5),
+    step: numCfg(r,"#loops-rg-step",1)
   }),
   build:({start,stop,step})=>{
     if(step===0) step=1;
@@ -3289,7 +3088,7 @@ createPlayer(document.getElementById("loops-w-list"), {
       <button data-mode="list" aria-pressed="true">Список</button>
       <button data-mode="str" aria-pressed="false">Рядок</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const isList = mode==="list";
     const items = isList ? ["яблуко","банан","слива"] : ["к","о","д"];
@@ -3345,7 +3144,7 @@ createPlayer(document.getElementById("loops-w-flow"), {
       <button data-mode="break" aria-pressed="true">break</button>
       <button data-mode="continue" aria-pressed="false">continue</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const out=[], frames=[];
     if(mode==="break"){
@@ -3394,9 +3193,9 @@ createPlayer(document.getElementById("loops-w-nested"), {
     <label>зовнішній <input type="number" data-cfg id="loops-ns-out" value="3" min="1" max="5"></label>
     <label>внутрішній <input type="number" data-cfg id="loops-ns-in" value="4" min="1" max="5"></label>`,
   readCfg:(r)=>({
-    mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode,
-    a:Math.max(1,Math.min(5,Number(r.querySelector("#loops-ns-out").value)||3)),
-    b:Math.max(1,Math.min(5,Number(r.querySelector("#loops-ns-in").value)||4))
+    mode:modeCfg(r),
+    a:numCfg(r,"#loops-ns-out",3),
+    b:numCfg(r,"#loops-ns-in",4)
   }),
   build:({mode,a,b})=>{
     const out=[], frames=[];
@@ -3508,7 +3307,14 @@ createPlayer(document.getElementById("loops-w-nested"), {
     }, 380);
   }
   btn.onclick = run;
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 600);
+  let auto = null;
+  /* запуск і зупинку веде роутер: сторінки лишаються в DOM, тому анімацію
+     схованої теми треба гасити, а при повторному заході — заводити знову */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
 })();
 
 };
@@ -3549,8 +3355,117 @@ function hl(line){
   return s + (cmt ? `<span class="cmt">${cmt}</span>` : "");
 }
 
+/* Усі створені програвачі: потрібні, щоб зупиняти анімації при переході на іншу
+   тему й перезаміряти висоти, коли зміняться шрифти або ширина вікна. */
+const players = [];
+function stopAllPlayers(){ players.forEach(p=>p.stop()); }
+function relockAllPlayers(){ players.forEach(p=>p.relock()); }
+
+/* Заміри висоти залежать від шрифту й ширини колонки. Веб-шрифт приїжджає вже
+   після першого рендера, а ширина змінюється при ресайзі — тому перезаміряємо. */
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(relockAllPlayers);
+let relockTimer = null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(relockTimer);
+  relockTimer = setTimeout(relockAllPlayers, 180);
+});
+
+/* ================= читання налаштувань ================= */
+/* Число з поля, обмежене його ж min/max. Порожнє або нечислове значення дає
+   fallback, а не 0: інакше очищене поле мовчки показувало б нуль, ніби так і
+   задумано. Атрибути min/max браузер не застосовує до набраного вручну. */
+function numCfg(root, sel, fallback){
+  const el = root.querySelector(sel);
+  if(!el) return fallback;
+  const raw = String(el.value).trim();
+  let n = raw === "" ? NaN : Number(raw);
+  if(!Number.isFinite(n)) n = fallback;
+  const lo = el.min === "" ? -Infinity : Number(el.min);
+  const hi = el.max === "" ?  Infinity : Number(el.max);
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/* Активний режим перемикача. Якщо жодна кнопка не натиснута — беремо першу,
+   щоб віджет не падав на .dataset неіснуючого елемента. */
+function modeCfg(root, group){
+  const sel = group ? `[data-mode][data-group="${group}"]` : "[data-mode]";
+  const on = root.querySelector(`${sel}[aria-pressed="true"]`) || root.querySelector(sel);
+  return on ? on.dataset.mode : "";
+}
+
+/* ================= оновлення вмісту на місці ================= */
+/* Раніше блок .extra щокадру перемальовувався через innerHTML. Через це всі
+   CSS-переходи (.cell, .bar, .kvrow, .selem, .hashslot) не працювали: елементи
+   щоразу були новими, і браузеру не було від чого анімувати. Тут ми оновлюємо
+   дерево на місці, поки його структура збігається, — і переходи оживають. */
+function patchNode(oldN, newN){
+  if(oldN.nodeType === 3 && newN.nodeType === 3){
+    if(oldN.data !== newN.data) oldN.data = newN.data;
+    return;
+  }
+  if(oldN.nodeType !== 1 || newN.nodeType !== 1 || oldN.tagName !== newN.tagName){
+    oldN.replaceWith(newN);
+    return;
+  }
+  for(const a of [...oldN.attributes])
+    if(!newN.hasAttribute(a.name)) oldN.removeAttribute(a.name);
+  for(const a of newN.attributes)
+    if(oldN.getAttribute(a.name) !== a.value) oldN.setAttribute(a.name, a.value);
+  patchChildren(oldN, [...newN.childNodes]);
+}
+
+function patchChildren(host, next){
+  const cur = [...host.childNodes];
+  if(cur.length !== next.length){ host.replaceChildren(...next); return; }
+  for(let k = 0; k < cur.length; k++) patchNode(cur[k], next[k]);
+}
+
+function patchInto(host, html){
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  patchChildren(host, [...tmp.childNodes]);
+}
+
+/* ================= стала висота блоків ================= */
+/* Блок, вміст якого змінюється з кадром, мусить мати висоту найвищого кадру —
+   інакше під час анімації він росте й зсуває весь текст під віджетом.
+   Усі варіанти вмісту міряються за один прохід: спершу вставляємо їх усі в
+   невидимий probe, і лише потім читаємо висоти — це один reflow, а не N. */
+function lockHeight(el, htmlList){
+  if(!el || !htmlList.length) return;
+  if(!el.offsetParent) return;                /* сторінка схована — міряти нічого */
+  el.style.minHeight = "";                    /* щоб прочитати саме CSS-значення */
+  const cs = getComputedStyle(el);
+  const padT = parseFloat(cs.paddingTop),  padB = parseFloat(cs.paddingBottom);
+  const padL = parseFloat(cs.paddingLeft), padR = parseFloat(cs.paddingRight);
+  const floor = parseFloat(cs.minHeight) || 0;
+
+  /* Абсолютні координати рахуються від padding-box, тому left:0/right:0 дали б
+     пробі зайві padding-и в ширину — текст переносився б пізніше, ніж насправді,
+     і заміряна висота вийшла б замалою. Тому ширину задаємо по content-box. */
+  const probe = document.createElement("div");
+  probe.setAttribute("aria-hidden", "true");
+  probe.style.cssText = "position:absolute; visibility:hidden; pointer-events:none; top:0;" +
+    `left:${padL}px; width:${Math.max(0, el.clientWidth - padL - padR)}px`;
+  const kids = htmlList.map(html=>{
+    const d = document.createElement("div");
+    d.className = el.className;               /* той самий flex / шрифт / gap */
+    d.style.cssText = "min-height:0; margin:0; padding:0; position:static";
+    d.innerHTML = html;
+    probe.appendChild(d);
+    return d;
+  });
+  el.appendChild(probe);
+  let max = 0;
+  for(const d of kids) max = Math.max(max, d.getBoundingClientRect().height);
+  probe.remove();
+  el.style.minHeight = Math.ceil(Math.max(max + padT + padB, floor)) + "px";
+}
+
 /* ================= програвач кроків ================= */
-function createPlayer(root, spec){
+/* Один рушій на всі теми. Теми різняться лише підсвіткою синтаксису й
+   швидкістю автопрокрутки — їх передає makePlayer через cfg. */
+function createPlayerWith(root, spec, cfg){
   if(!root) return;
   root.innerHTML = `
     ${spec.config ? `<div class="w-config">${spec.config}</div>` : ""}
@@ -3585,11 +3500,45 @@ function createPlayer(root, spec){
 
   let frames=[], code=[], idx=0, timer=null, prevChips=null;
 
+  /* однакові будівники розмітки для рендера й для замірів висоти */
+  const chipsOf = (f) => (f.vars||[]).map(v=>
+      `<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("")
+    || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
+  const outOf = (f) => {
+    const out = f.out||[];
+    return out.length
+      ? out.map((l,k)=>`<div class="ln ${k===out.length-1?"last":""}">${esc(l)||" "}</div>`).join("")
+      : `<div class="empty">консоль порожня</div>`;
+  };
+  const noteOf = (f) => `<span class="dot"></span><span>${esc(f.note||"")}</span>`;
+
+  /* Висоту блоків, що змінюються з кадром, фіксуємо по найвищому кадру, щоб
+     текст під віджетом не з'їзджав під час анімації. Консоль окремо: у неї
+     буває до 30 рядків, тому це не min-height, а стала висота з прокруткою. */
+  function lockAll(){
+    const lines = Math.max(1, ...frames.map(f=>(f.out||[]).length));
+    outEl.style.setProperty("--out-lines", String(Math.min(9, Math.max(3, lines))));
+    noteEl.className = "note";                /* міряємо базовий вигляд */
+    lockHeight(chipsEl, frames.map(chipsOf));
+    lockHeight(noteEl,  frames.map(noteOf));
+    if(extraEl) lockHeight(extraEl, frames.map(f=>spec.extra(f)));
+  }
+
   function rebuild(){
     const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
-    code = built.code; frames = built.frames;
+    code = built.code || []; frames = built.frames || [];
+    codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${cfg.hl(l)||"&nbsp;"}</span>`).join("");
+    /* без кадрів render() впав би на f.line — глушимо керування, а не віджет */
+    if(!frames.length){
+      prevChips = null;
+      noteTx.textContent = "Для цих налаштувань немає що показати.";
+      counter.textContent = "0 / 0";
+      [playB, backB, stepB, scrub].forEach(el=>{ el.disabled = true; });
+      return;
+    }
+    playB.disabled = false; scrub.disabled = false;
     idx = 0; prevChips = null; scrub.max = frames.length-1; scrub.value = 0;
-    codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${hl(l)||"&nbsp;"}</span>`).join("");
+    lockAll();
     render();
   }
 
@@ -3598,20 +3547,17 @@ function createPlayer(root, spec){
     codeEl.querySelectorAll(".cl").forEach(el=>{
       el.classList.toggle("active", Number(el.dataset.l)===f.line);
     });
-    const chipHtml = (f.vars||[]).map(v=>`<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("");
+    const chipHtml = chipsOf(f);
     if(chipHtml!==prevChips){
-      chipsEl.innerHTML = chipHtml || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
+      chipsEl.innerHTML = chipHtml;
       chipsEl.querySelectorAll(".chip").forEach(c=>c.classList.add("pop"));
       prevChips = chipHtml;
     }
-    const out = f.out||[];
-    outEl.innerHTML = out.length
-      ? out.map((l,k)=>`<div class="ln ${k===out.length-1?"last":""}">${esc(l)||" "}</div>`).join("")
-      : `<div class="empty">консоль порожня</div>`;
+    outEl.innerHTML = outOf(f);
     outEl.scrollTop = outEl.scrollHeight;
     noteTx.textContent = f.note||"";
     noteEl.className = "note" + (f.kind?" "+f.kind:"");
-    if(extraEl) extraEl.innerHTML = spec.extra(f);
+    if(extraEl) patchInto(extraEl, spec.extra(f));
     scrub.value = idx;
     counter.textContent = `${idx+1} / ${frames.length}`;
     backB.disabled = idx===0;
@@ -3619,6 +3565,8 @@ function createPlayer(root, spec){
   }
 
   function go(n){ idx = Math.max(0, Math.min(frames.length-1, n)); render(); }
+  /* перезамір після зміни шрифту чи ширини вікна */
+  function relock(){ if(frames.length){ lockAll(); render(); } }
   function stop(){ clearInterval(timer); timer=null; playB.textContent="Запустити"; }
   function play(){
     if(timer){ stop(); return; }
@@ -3627,7 +3575,7 @@ function createPlayer(root, spec){
     timer = setInterval(()=>{
       if(idx>=frames.length-1){ stop(); return; }
       go(idx+1);
-    }, 700);
+    }, cfg.tick);
   }
 
   playB.onclick = play;
@@ -3651,8 +3599,16 @@ function createPlayer(root, spec){
     });
   });
 
+  players.push({ root, stop, relock });
   rebuild();
 }
+
+/* Віддає createPlayer, налаштований під конкретну тему. */
+function makePlayer(opts){
+  const cfg = { hl: (opts && opts.hl) || hl, tick: (opts && opts.tick) || 700 };
+  return (root, spec) => createPlayerWith(root, spec, cfg);
+}
+const createPlayer = makePlayer();
 
 /* ================= як показувати значення ================= */
 const q      = (x) => typeof x === "string" ? `"${x}"` : String(x);
@@ -3661,7 +3617,7 @@ const dictStr = (p) => p.length ? "{" + p.map(x=>`${q(x.k)}: ${q(x.v)}`).join(",
 const setStr  = (a) => a.length ? "{" + a.map(q).join(", ") + "}" : "set()";
 
 /* ================= блоки візуалізації ================= */
-/* комірки списку; st — об'єкт «індекс → клас», neg — показувати від'ємні індекси */
+/* комірки списку; state — об'єкт «індекс → клас» */
 function cells(arr, opts){
   opts = opts || {};
   const st = opts.state || {};
@@ -3670,8 +3626,7 @@ function cells(arr, opts){
   return `<div class="lst">` + arr.map((v,k)=>{
     const cls = st[k] || "";
     const on = (cls==="now"||cls==="hit") ? " on" : "";
-    const ix = opts.noIndex ? ""
-      : `<div class="ix">${k}</div>` + (opts.neg ? `<div class="nix">${k - arr.length}</div>` : "");
+    const ix = opts.noIndex ? "" : `<div class="ix">${k}</div>`;
     return `<div class="cellw${on}"><div class="cell ${cls}">${esc(q(v))}</div>${ix}</div>`;
   }).join("") + `</div>`;
 }
@@ -3729,7 +3684,8 @@ function bars(items, maxSize){
 
 const legendHtml = (parts) => parts.map(p=>`<span><i class="${p[0]}"></i>${p[1]}</span>`).join("");
 
-return { esc, hl, createPlayer, q, listStr, dictStr, setStr,
+return { esc, hl, createPlayer, makePlayer, stopAllPlayers, relockAllPlayers,
+         numCfg, modeCfg, q, listStr, dictStr, setStr,
          cells, row, kv, selems, setrow, conveyor, bars, legendHtml };
 })();
 </script>
@@ -3738,7 +3694,7 @@ return { esc, hl, createPlayer, q, listStr, dictStr, setStr,
 "use strict";
 window.PageInit["coll"] = function(){
 const K = window.CollKit;
-const { esc, createPlayer, listStr, dictStr, setStr, cells, row, kv, selems, setrow } = K;
+const { esc, createPlayer, numCfg, modeCfg, listStr, dictStr, setStr, cells, row, kv, selems, setrow } = K;
 
 const NAMES = ["Оля", "Іван", "Оля", "Ніна"];
 
@@ -3749,7 +3705,7 @@ createPlayer(document.getElementById("coll-w-three"), {
       <button data-mode="dict" aria-pressed="false">словник</button>
       <button data-mode="set" aria-pressed="false">множина</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const src = `["Оля", "Іван", "Оля", "Ніна"]`;
     const code = mode==="list"
@@ -3919,13 +3875,13 @@ createPlayer(document.getElementById("coll-w-three"), {
 "use strict";
 window.PageInit["list"] = function(){
 const K = window.CollKit;
-const { esc, createPlayer, listStr, cells, row, conveyor, bars, legendHtml } = K;
+const { esc, createPlayer, numCfg, modeCfg, listStr, cells, row, conveyor, bars, legendHtml } = K;
 const $id = (s) => document.getElementById(s);
 
 /* ================= 1. індекси ================= */
 createPlayer($id("list-w-index"), {
   config:`<label>індекс <input type="number" data-cfg id="list-ix" value="2" min="-8" max="8" step="1"></label>`,
-  readCfg:(r)=>({ i: Number(r.querySelector("#list-ix").value) || 0 }),
+  readCfg:(r)=>({ i: numCfg(r,"#list-ix",2) }),
   build:({i})=>{
     const nums = [10, 20, 30, 40];
     const code = [
@@ -3939,7 +3895,7 @@ createPlayer($id("list-w-index"), {
     const frames = [], out = [];
 
     frames.push({line:0, nums, mark:{}, vars:V, out:[],
-      note:`Чотири комірки. Індекси йдуть від 0 до ${nums.length - 1}, а знизу — ті самі комірки з від'ємного боку.`});
+      note:`Чотири комірки. Індекси йдуть від 0 до ${nums.length - 1}, а з від'ємного боку — від ${-nums.length} до -1.`});
 
     frames.push({line:1, nums, mark: ok ? {[real]:"now"} : {}, vars:V, out:[],
       note: i < 0
@@ -3963,7 +3919,7 @@ createPlayer($id("list-w-index"), {
     }
     return {code, frames};
   },
-  extra:(f)=> row("nums", cells(f.nums, {state:f.mark, neg:true}), "i")
+  extra:(f)=> row("nums", cells(f.nums, {state:f.mark}), "i")
 });
 
 /* ================= 2. зрізи ================= */
@@ -3992,14 +3948,27 @@ createPlayer($id("list-w-slice"), {
   }),
   build:({a, b, c})=>{
     const nums = [10, 20, 30, 40, 50, 60];
-    const na = a === "" ? null : (parseInt(a, 10) || 0);
-    const nb = b === "" ? null : (parseInt(b, 10) || 0);
-    let nc = c === "" ? 1 : parseInt(c, 10);
-    if(!nc || isNaN(nc)) nc = 1;
     const expr = `nums[${a}:${b}${c === "" ? "" : ":" + c}]`;
     const code = [`nums = [10, 20, 30, 40, 50, 60]`, `part = ${expr}`, `print(part)`, `print(nums)`];
-    const plan = slicePlan(nums.length, na, nb, nc);
     const V = [{name:"nums", val:listStr(nums), cls:"i"}];
+
+    /* Тут поля текстові (порожнє = «без межі»), тому їх треба перевіряти самим.
+       Раніше «abc» тихо ставало нулем: у коді було nums[abc:4], а рахувалось
+       nums[0:4] — тобто віджет показував одне, а робив інше. */
+    const isInt = (s) => /^[+-]?\d+$/.test(s);
+    const badField = [["від", a], ["до", b], ["крок", c]].find(([, v]) => v !== "" && !isInt(v));
+    if(badField) return {code, frames:[{line:1, nums, mark:{}, got:[], vars:V, kind:"end",
+      out:["TypeError: slice indices must be integers or None, not str"],
+      note:`У полі «${badField[0]}» стоїть «${badField[1]}», а це не ціле число. Межі зрізу бувають лише цілими числами або порожніми.`}]};
+
+    const na = a === "" ? null : Number(a);
+    const nb = b === "" ? null : Number(b);
+    const nc = c === "" ? 1 : Number(c);
+    if(nc === 0) return {code, frames:[{line:1, nums, mark:{}, got:[], vars:V, kind:"end",
+      out:["ValueError: slice step cannot be zero"],
+      note:`Крок нуль — це нескінченне тупцювання на місці, тому Python одразу зупиняє програму.`}]};
+
+    const plan = slicePlan(nums.length, na, nb, nc);
     const frames = [], out = [], got = [];
 
     frames.push({line:0, nums, mark:{}, got:[], vars:V, out:[],
@@ -4097,7 +4066,7 @@ createPlayer($id("list-w-alias"), {
       <button data-mode="alias" aria-pressed="true">b = a</button>
       <button data-mode="copy" aria-pressed="false">b = a[:]</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const alias = mode === "alias";
     const code = [
@@ -4154,7 +4123,7 @@ createPlayer($id("list-w-sort"), {
       <button data-mode="keylen" aria-pressed="false">key=len</button>
       <button data-mode="inplace" aria-pressed="false">nums.sort()</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const words = mode === "keylen";
     const src = words ? ["код", "Python", "як", "цикли"] : [30, 10, 40, 20];
@@ -4253,7 +4222,7 @@ createPlayer($id("list-w-map"), {
       <button data-mode="sq" aria-pressed="false">x ** 2</button>
       <button data-mode="str" aria-pressed="false">str(x)</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const nums = [3, 7, 12, 5];
     const f = mode === "x2" ? (x)=>x * 2 : mode === "sq" ? (x)=>x * x : (x)=>`"${x}"`;
@@ -4301,7 +4270,7 @@ createPlayer($id("list-w-filter"), {
       <button data-mode="gt" aria-pressed="true">x &gt; 10</button>
       <button data-mode="even" aria-pressed="false">x % 2 == 0</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const nums = [3, 12, 7, 20, 5];
     const test = mode === "gt" ? (x)=>x > 10 : (x)=>x % 2 === 0;
@@ -4356,7 +4325,7 @@ createPlayer($id("list-w-comp"), {
       <button data-mode="filter" aria-pressed="false">як filter</button>
       <button data-mode="both" aria-pressed="false">обидва</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const nums = [3, 12, 7, 20, 5];
     const hasIf = mode !== "map";
@@ -4418,7 +4387,7 @@ createPlayer($id("list-w-agg"), {
       <button data-mode="max" aria-pressed="false">max</button>
       <button data-mode="len" aria-pressed="false">len</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const nums = [12, 5, 20, 8];
     const head = `nums = [12, 5, 20, 8]`;
@@ -4478,7 +4447,7 @@ createPlayer($id("list-w-anyall"), {
       <button data-mode="any" aria-pressed="true">any</button>
       <button data-mode="all" aria-pressed="false">all</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const nums = [7, 12, 3, 20];
     const isAny = mode === "any";
@@ -4534,7 +4503,7 @@ createPlayer($id("list-w-zip"), {
       <button data-mode="enum" aria-pressed="true">enumerate</button>
       <button data-mode="zip" aria-pressed="false">zip</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const names = ["Оля", "Іван", "Ніна"];
     const ages = [16, 15];
@@ -4604,9 +4573,12 @@ createPlayer($id("list-w-zip"), {
   const btn = document.getElementById("list-heroBtn");
   if(!box) return;
   const nums = [10, 20, 30, 40];
-  const Q = [0, 2, -1, 7];
+  /* Тільки невід'ємні індекси: від'ємні вводяться нижче, у розділі
+     «Пронумеровані комірки», де їх одразу й пояснюють. 3 і 7 показують межу —
+     останній індекс чотирьох комірок дорівнює 3, а не 4. */
+  const Q = [0, 2, 3, 7];
   let t = null;
-  function draw(mark){ box.innerHTML = cells(nums, {state:mark, neg:true}); }
+  function draw(mark){ box.innerHTML = cells(nums, {state:mark}); }
   function run(){
     clearInterval(t);
     draw({});
@@ -4617,10 +4589,10 @@ createPlayer($id("list-w-zip"), {
         line.innerHTML = `у списку шукають за <b>номером комірки</b>, а не за іменем`;
         return;
       }
-      const i = Q[k], real = i < 0 ? nums.length + i : i;
-      if(real >= 0 && real < nums.length){
-        draw({[real]:"hit"});
-        line.innerHTML = `nums[${i}] → <b>${nums[real]}</b>`;
+      const i = Q[k];
+      if(i < nums.length){
+        draw({[i]:"hit"});
+        line.innerHTML = `nums[${i}] → <b>${nums[i]}</b>`;
       }else{
         draw({});
         line.innerHTML = `nums[${i}] → <b>IndexError</b> — такої комірки немає`;
@@ -4630,7 +4602,14 @@ createPlayer($id("list-w-zip"), {
   }
   btn.onclick = run;
   draw({});
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 600);
+  let auto = null;
+  /* запуск і зупинку веде роутер: сторінки лишаються в DOM, тому анімацію
+     схованої теми треба гасити, а при повторному заході — заводити знову */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
 })();
 
 };
@@ -4639,7 +4618,7 @@ createPlayer($id("list-w-zip"), {
 "use strict";
 window.PageInit["dict"] = function(){
 const K = window.CollKit;
-const { esc, createPlayer, listStr, dictStr, cells, row, kv, legendHtml } = K;
+const { esc, createPlayer, numCfg, modeCfg, listStr, dictStr, cells, row, kv, legendHtml } = K;
 const $id = (s) => document.getElementById(s);
 const pairStr = (p) => `("${p.k}", ${p.v})`;
 
@@ -4688,8 +4667,10 @@ createPlayer($id("dict-w-get"), {
       <button data-mode="get" aria-pressed="false">ages.get(ключ)</button>
     </span>`,
   readCfg:(r)=>({
-    key: r.querySelector("#dict-gk").value.trim() || "Ніна",
-    mode: r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode
+    /* ключ показується всередині рядкового літерала Python, тому лапки й
+       слеш прибираємо — інакше в панелі коду виходив би зламаний Python */
+    key: r.querySelector("#dict-gk").value.trim().replace(/["\\]/g, "") || "Ніна",
+    mode: modeCfg(r)
   }),
   build:({key, mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}];
@@ -4750,7 +4731,7 @@ createPlayer($id("dict-w-loop"), {
       <button data-mode="values" aria-pressed="false">значення</button>
       <button data-mode="items" aria-pressed="false">пари</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}, {k:"Ніна", v:14}];
     const first = `ages = {"Оля": 16, "Іван": 15, "Ніна": 14}`;
@@ -4827,7 +4808,7 @@ createPlayer($id("dict-w-views"), {
       <button data-mode="values" aria-pressed="false">.values()</button>
       <button data-mode="items" aria-pressed="false">.items()</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}, {k:"Ніна", v:17}];
     const first = `ages = {"Оля": 16, "Іван": 15, "Ніна": 17}`;
@@ -4871,7 +4852,7 @@ createPlayer($id("dict-w-sort"), {
       <button data-mode="val" aria-pressed="false">за значенням</button>
       <button data-mode="valrev" aria-pressed="false">за значенням ↓</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}, {k:"Ніна", v:17}];
     const first = `ages = {"Оля": 16, "Іван": 15, "Ніна": 17}`;
@@ -4952,7 +4933,7 @@ createPlayer($id("dict-w-max"), {
       <button data-mode="key" aria-pressed="false">max(ages, key=ages.get)</button>
       <button data-mode="sum" aria-pressed="false">sum(ages.values())</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}, {k:"Ніна", v:17}];
     const first = `ages = {"Оля": 16, "Іван": 15, "Ніна": 17}`;
@@ -5068,7 +5049,7 @@ createPlayer($id("dict-w-comp"), {
       <button data-mode="swap" aria-pressed="false">поміняти місцями</button>
       <button data-mode="zip" aria-pressed="false">із двох списків</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const base = [{k:"Оля", v:16}, {k:"Іван", v:15}, {k:"Ніна", v:17}];
     const first = `ages = {"Оля": 16, "Іван": 15, "Ніна": 17}`;
@@ -5166,7 +5147,14 @@ createPlayer($id("dict-w-comp"), {
     }, 1100);
   }
   btn.onclick = run;
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 600);
+  let auto = null;
+  /* запуск і зупинку веде роутер: сторінки лишаються в DOM, тому анімацію
+     схованої теми треба гасити, а при повторному заході — заводити знову */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
 })();
 
 };
@@ -5175,7 +5163,7 @@ createPlayer($id("dict-w-comp"), {
 "use strict";
 window.PageInit["set"] = function(){
 const K = window.CollKit;
-const { esc, createPlayer, listStr, setStr, cells, row, selems, setrow, legendHtml } = K;
+const { esc, createPlayer, numCfg, modeCfg, listStr, setStr, cells, row, selems, setrow, legendHtml } = K;
 const $id = (s) => document.getElementById(s);
 
 /* ================= 1. множина без повторів ================= */
@@ -5284,7 +5272,7 @@ createPlayer($id("set-w-ops"), {
       <button data-mode="and" aria-pressed="false">math &amp; art</button>
       <button data-mode="sub" aria-pressed="false">math - art</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>opBuild(mode, false),
   extra:opExtra
 });
@@ -5297,7 +5285,7 @@ createPlayer($id("set-w-methods"), {
       <button data-mode="sub" aria-pressed="false">.difference()</button>
       <button data-mode="sym" aria-pressed="false">.symmetric_difference()</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>opBuild(mode, true),
   extra:opExtra
 });
@@ -5309,7 +5297,7 @@ createPlayer($id("set-w-sub"), {
       <button data-mode="sup" aria-pressed="false">a.issuperset(b)</button>
       <button data-mode="dis" aria-pressed="false">a.isdisjoint(b)</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const a = ["Оля", "Іван"], b = ["Оля", "Іван", "Ніна"];
     const expr = mode === "sub" ? `a.issubset(b)` : mode === "sup" ? `a.issuperset(b)` : `a.isdisjoint(b)`;
@@ -5374,8 +5362,8 @@ createPlayer($id("set-w-speed"), {
       <button data-mode="set" aria-pressed="false">у множині</button>
     </span>`,
   readCfg:(r)=>({
-    target: Number(r.querySelector("#set-q").value) || 0,
-    mode: r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode
+    target: numCfg(r,"#set-q",65),
+    mode: modeCfg(r)
   }),
   build:({target, mode})=>{
     const nums = [10, 21, 32, 43, 54, 65, 76, 87];
@@ -5457,7 +5445,7 @@ createPlayer($id("set-w-dedup"), {
       <button data-mode="sorted" aria-pressed="false">sorted(set(names))</button>
       <button data-mode="keys" aria-pressed="false">dict.fromkeys(names)</button>
     </span>`,
-  readCfg:(r)=>({mode:r.querySelector('[data-mode][aria-pressed="true"]').dataset.mode}),
+  readCfg:(r)=>({mode:modeCfg(r)}),
   build:({mode})=>{
     const src = ["Оля", "Іван", "Оля", "Ніна", "Іван"];
     const first = `names = ["Оля", "Іван", "Оля", "Ніна", "Іван"]`;
@@ -5542,7 +5530,14 @@ createPlayer($id("set-w-dedup"), {
   }
   btn.onclick = run;
   draw({}, []);
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(run, 600);
+  let auto = null;
+  /* запуск і зупинку веде роутер: сторінки лишаються в DOM, тому анімацію
+     схованої теми треба гасити, а при повторному заході — заводити знову */
+  window.registerAnim({
+    el: btn,
+    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
 })();
 
 };
