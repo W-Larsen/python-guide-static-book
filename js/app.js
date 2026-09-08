@@ -403,14 +403,27 @@ function vizFunc(svg){
 const VIZ = {};
 (function initViz(){
   const map = { vars: vizVars, cond: vizCond, loops: vizLoop, func: vizFunc, dicts: vizDict };
+  /* Раніше картки оживали лише на mouseenter — тобто на сенсорному екрані
+     не грали ніколи. Тепер запускає поява в екрані, а наведення лишається
+     додатковим тригером. */
+  const io = (!reduced && "IntersectionObserver" in window)
+    ? new IntersectionObserver(entries=>{
+        entries.forEach(en=>{
+          const anim = VIZ[en.target.dataset.viz];
+          if(anim && en.isIntersecting && !activeRoute && !document.hidden) anim.start();
+        });
+      }, { threshold:.4 })
+    : null;
+
   $$("[data-viz]").forEach(card=>{
     const kind = card.dataset.viz;
     const svg = $("svg", card);
     if(!map[kind] || !svg) return;
     const anim = map[kind](svg);
     VIZ[kind] = anim;
-    if(reduced) anim.once();
+    if(reduced){ anim.once(); return; }
     card.addEventListener("mouseenter", ()=>anim.start());
+    if(io) io.observe(card);
   });
 })();
 

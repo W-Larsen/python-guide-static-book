@@ -31,6 +31,12 @@ function hl(line){
   return s + (cmt ? `<span class="cmt">${cmt}</span>` : "");
 }
 
+/* Рушій руху. Якщо motion.js чомусь не під'єднали, працюємо без анімацій —
+   кадри від цього не ламаються, бо все й так намальоване в DOM. */
+const MO = window.Motion || { reduced:true, snapshot:()=>null, flip:()=>{},
+                              tween:(el,f,t)=>{ if(el) el.textContent = String(t); },
+                              cancel:()=>{} };
+
 /* Усі створені програвачі: потрібні, щоб зупиняти анімації при переході на іншу
    тему й перезаміряти висоти, коли зміняться шрифти або ширина вікна. */
 const players = [];
@@ -138,6 +144,21 @@ function lockHeight(el, htmlList){
   el.style.minHeight = Math.ceil(Math.max(max + padT + padB, floor)) + "px";
 }
 
+/* ================= іконки керування ================= */
+/* Вбудований SVG — без сторонніх залежностей і без зайвого запиту. */
+const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICON = {
+  reset: svg("M7 6h2.3v12H7zM19 6v12l-8.4-6z"),
+  back:  svg("M15.4 5.5 16.9 7l-5 5 5 5-1.5 1.5L8.9 12z"),
+  step:  svg("M8.6 5.5 7.1 7l5 5-5 5 1.5 1.5 6.5-6.5z"),
+  play:  svg("M8 5v14l11-7z"),
+  pause: svg("M7 5h3.4v14H7zM13.6 5H17v14h-3.4z")
+};
+
+/* Швидкості, які циклює кнопка. Множник до cfg.tick. */
+const SPEEDS = [0.5, 1, 2];
+const speedLabel = (s) => (s === 1 ? "1×" : s === 2 ? "2×" : "0.5×");
+
 /* ================= програвач кроків ================= */
 /* Один рушій на всі теми. Теми різняться лише підсвіткою синтаксису й
    швидкістю автопрокрутки — їх передає makePlayer через cfg. */
@@ -161,24 +182,34 @@ function createPlayerWith(root, spec, cfg){
     ${spec.legend ? `<div class="legend">${spec.legend}</div>` : ""}
     <div class="note" data-note><span class="dot"></span><span data-notetext></span></div>
     <div class="controls">
-      <button class="ctl primary" data-play>Запустити</button>
-      <button class="ctl" data-back>Назад</button>
-      <button class="ctl" data-step>Крок</button>
-      <input type="range" min="0" max="1" value="0" data-scrub aria-label="Крок виконання">
+      <button class="ctl ico" data-reset aria-label="На початок" title="На початок">${ICON.reset}</button>
+      <button class="ctl ico" data-back aria-label="Крок назад" title="Крок назад">${ICON.back}</button>
+      <button class="ctl play" data-play aria-label="Запустити" title="Запустити">${ICON.play}</button>
+      <button class="ctl ico" data-step aria-label="Крок вперед" title="Крок вперед">${ICON.step}</button>
+      <div class="timeline">
+        <input type="range" min="0" max="1" value="0" data-scrub aria-label="Крок виконання">
+        <div class="ticks" data-ticks aria-hidden="true"></div>
+      </div>
       <span class="counter" data-counter></span>
+      <button class="ctl speed" data-speed aria-label="Швидкість відтворення" title="Швидкість відтворення">1×</button>
     </div>`;
 
   const $ = (s) => root.querySelector(s);
   const codeEl=$("[data-code]"), chipsEl=$("[data-chips]"), outEl=$("[data-out]"),
         noteEl=$("[data-note]"), noteTx=$("[data-notetext]"), extraEl=$("[data-extra]"),
         playB=$("[data-play]"), backB=$("[data-back]"), stepB=$("[data-step]"),
-        scrub=$("[data-scrub]"), counter=$("[data-counter]");
+        resetB=$("[data-reset]"), speedB=$("[data-speed]"),
+        scrub=$("[data-scrub]"), ticksEl=$("[data-ticks]"), counter=$("[data-counter]");
 
-  let frames=[], code=[], idx=0, timer=null, prevChips=null;
+  let frames=[], code=[], idx=0, raf=null, acc=0, last=0, prevChips=null;
+  let speedI = 1, touched = false, quiet = false;
+  /* «ключ деталі → кадри, де вона активна» і «рядок коду → перший його кадр»:
+     обидва індекси роблять сцену клікабельною (див. §пряма маніпуляція) */
+  let keyIdx = Object.create(null), lineIdx = Object.create(null);
 
   /* однакові будівники розмітки для рендера й для замірів висоти */
   const chipsOf = (f) => (f.vars||[]).map(v=>
-      `<span class="chip ${v.cls||""}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("")
+      `<span class="chip ${v.cls||""}" data-key="${esc(v.name)}"><b>${esc(v.name)}</b> = ${esc(v.val)}</span>`).join("")
     || `<span class="chip" style="opacity:.5">поки порожньо</span>`;
   const outOf = (f) => {
     const out = f.out||[];
@@ -200,6 +231,46 @@ function createPlayerWith(root, spec, cfg){
     if(extraEl) lockHeight(extraEl, frames.map(f=>spec.extra(f)));
   }
 
+  /* ---------- індекси прямої маніпуляції ----------
+     Розмітка кадрів усе одно будується для lockHeight, тож зайвої роботи
+     тут нема: той самий прохід збирає, у яких кадрах кожна деталь активна.
+     «Активна» — це клас now, hit або active у розмітці кадру. */
+  const ACTIVE = /(^|\s)(now|hit|active)(\s|$)/;
+  function buildIndex(){
+    keyIdx = Object.create(null); lineIdx = Object.create(null);
+    const box = document.createElement("div");
+    frames.forEach((f,k)=>{
+      if(lineIdx[f.line] === undefined) lineIdx[f.line] = k;
+      /* чипи: змінна «активна» в усіх кадрах, де вона взагалі є */
+      (f.vars||[]).forEach(v=>{ (keyIdx[v.name] = keyIdx[v.name] || []).push(k); });
+      if(!spec.extra) return;
+      box.innerHTML = spec.extra(f);
+      box.querySelectorAll("[data-key]").forEach(el=>{
+        if(!ACTIVE.test(el.className) && !ACTIVE.test(el.firstElementChild ? el.firstElementChild.className : "")) return;
+        const key = el.dataset.key, list = keyIdx[key] = keyIdx[key] || [];
+        if(list[list.length-1] !== k) list.push(k);
+      });
+    });
+  }
+
+  /* Клікабельні деталі не потрапляють в табуляцію окремо (навігація по кадрах
+     покриває той самий сценарій) — їм лишається пояснення в title. */
+  function markClickable(host){
+    if(!host) return;
+    host.querySelectorAll("[data-key]").forEach(el=>{
+      if(!keyIdx[el.dataset.key]) return;      /* деталь ніде не активна — нема куди вести */
+      el.classList.add("jump");
+      el.title = "Перемотати до кадру, де ця деталь активна";
+    });
+  }
+
+  function buildTicks(){
+    /* засічки читаються, поки їх небагато; далі вони зливаються в сіру смугу */
+    if(frames.length < 2 || frames.length > 40){ ticksEl.hidden = true; ticksEl.innerHTML = ""; return; }
+    ticksEl.hidden = false;
+    ticksEl.innerHTML = new Array(frames.length).fill("<i></i>").join("");
+  }
+
   function rebuild(){
     const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
     code = built.code || []; frames = built.frames || [];
@@ -207,63 +278,149 @@ function createPlayerWith(root, spec, cfg){
     /* без кадрів render() впав би на f.line — глушимо керування, а не віджет */
     if(!frames.length){
       prevChips = null;
+      keyIdx = Object.create(null); lineIdx = Object.create(null);
       noteTx.textContent = "Для цих налаштувань немає що показати.";
       counter.textContent = "0 / 0";
-      [playB, backB, stepB, scrub].forEach(el=>{ el.disabled = true; });
+      ticksEl.hidden = true; ticksEl.innerHTML = "";
+      [playB, backB, stepB, resetB, scrub].forEach(el=>{ el.disabled = true; });
       return;
     }
-    playB.disabled = false; scrub.disabled = false;
+    [playB, scrub, speedB].forEach(el=>{ el.disabled = false; });
     idx = 0; prevChips = null; scrub.max = frames.length-1; scrub.value = 0;
+    buildIndex();
+    buildTicks();
     lockAll();
     render();
   }
 
   function render(){
     const f = frames[idx];
+    /* знімок ДО оновлення DOM — далі FLIP програє різницю */
+    const before = quiet ? null : MO.snapshot(root);
+
     codeEl.querySelectorAll(".cl").forEach(el=>{
       el.classList.toggle("active", Number(el.dataset.l)===f.line);
     });
+    /* чипи оновлюються на місці, а не через innerHTML: інакше вони щокадру
+       були б новими елементами і FLIP не мав би що з чим зіставляти */
     const chipHtml = chipsOf(f);
     if(chipHtml!==prevChips){
-      chipsEl.innerHTML = chipHtml;
-      chipsEl.querySelectorAll(".chip").forEach(c=>c.classList.add("pop"));
+      patchInto(chipsEl, chipHtml);
+      markClickable(chipsEl);
       prevChips = chipHtml;
     }
     outEl.innerHTML = outOf(f);
     outEl.scrollTop = outEl.scrollHeight;
     noteTx.textContent = f.note||"";
     noteEl.className = "note" + (f.kind?" "+f.kind:"");
-    if(extraEl) patchInto(extraEl, spec.extra(f));
+    if(extraEl){ patchInto(extraEl, spec.extra(f)); markClickable(extraEl); }
     scrub.value = idx;
     counter.textContent = `${idx+1} / ${frames.length}`;
-    backB.disabled = idx===0;
+    backB.disabled = resetB.disabled = idx===0;
     stepB.disabled = idx===frames.length-1;
+
+    MO.flip(root, before);
   }
 
   function go(n){ idx = Math.max(0, Math.min(frames.length-1, n)); render(); }
-  /* перезамір після зміни шрифту чи ширини вікна */
-  function relock(){ if(frames.length){ lockAll(); render(); } }
-  function stop(){ clearInterval(timer); timer=null; playB.textContent="Запустити"; }
-  function play(){
-    if(timer){ stop(); return; }
-    if(idx===frames.length-1) idx=0;
-    playB.textContent="Пауза";
-    timer = setInterval(()=>{
-      if(idx>=frames.length-1){ stop(); return; }
-      go(idx+1);
-    }, cfg.tick);
+  /* Перезамір після зміни шрифту чи ширини вікна. Кадр той самий — рухати
+     нічого не треба, інакше кожен ресайз давав би зайвий переїзд деталей. */
+  function relock(){
+    if(!frames.length) return;
+    quiet = true;
+    lockAll(); render();
+    quiet = false;
   }
 
-  playB.onclick = play;
-  stepB.onclick = ()=>{ stop(); go(idx+1); };
-  backB.onclick = ()=>{ stop(); go(idx-1); };
-  scrub.oninput = ()=>{ stop(); go(Number(scrub.value)); };
-  root.addEventListener("keydown", e=>{
-    if(e.key==="ArrowRight"){ stop(); go(idx+1); e.preventDefault(); }
-    if(e.key==="ArrowLeft"){ stop(); go(idx-1); e.preventDefault(); }
+  /* ---------- відтворення ----------
+     rAF замість setInterval: нема дрейфу таймера, є чесна пауза на схованій
+     вкладці й правильна робота з регулятором швидкості. Крок між кадрами
+     лишається дискретним — плавність дає FLIP, а не інтерполяція кадрів. */
+  function setPlayIcon(on){
+    playB.innerHTML = on ? ICON.pause : ICON.play;
+    playB.title = on ? "Пауза" : "Запустити";
+    playB.setAttribute("aria-label", playB.title);
+  }
+  function stop(){
+    if(raf){ cancelAnimationFrame(raf); raf = null; }
+    setPlayIcon(false);
+  }
+  function loop(t){
+    if(!raf) return;
+    if(document.hidden){ last = t; raf = requestAnimationFrame(loop); return; }
+    acc += Math.min(400, t - last); last = t;
+    const stepMs = cfg.tick / SPEEDS[speedI];
+    while(acc >= stepMs){
+      acc -= stepMs;
+      if(idx >= frames.length-1){ stop(); return; }
+      go(idx+1);
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  function play(){
+    if(!frames.length) return;
+    if(raf){ stop(); return; }
+    if(idx===frames.length-1) go(0);
+    setPlayIcon(true);
+    last = performance.now(); acc = 0;
+    raf = requestAnimationFrame(loop);
+  }
+  /* ручна дія скасовує автостарт при прокрутці — віджет не має оживати сам
+     після того, як людина його зупинила */
+  const byHand = (fn) => (...a)=>{ touched = true; return fn(...a); };
+
+  playB.onclick  = byHand(play);
+  stepB.onclick  = byHand(()=>{ stop(); go(idx+1); });
+  backB.onclick  = byHand(()=>{ stop(); go(idx-1); });
+  resetB.onclick = byHand(()=>{ stop(); go(0); });
+  scrub.oninput  = byHand(()=>{ stop(); go(Number(scrub.value)); });
+  speedB.onclick = ()=>{
+    speedI = (speedI + 1) % SPEEDS.length;
+    speedB.textContent = speedLabel(SPEEDS[speedI]);
+    acc = 0;                                   /* нова швидкість — з чистого аркуша */
+  };
+
+  /* ---------- пряма маніпуляція: клік по сцені = перемотка ---------- */
+  const nextWith = (list) => {
+    for(const n of list) if(n > idx) return n;
+    return list[0];
+  };
+  root.addEventListener("click", e=>{
+    if(!frames.length) return;
+    const cl = e.target.closest(".cl");
+    if(cl && codeEl.contains(cl)){
+      const n = lineIdx[cl.dataset.l];
+      if(n !== undefined){ touched = true; stop(); go(n); }
+      return;
+    }
+    const kel = e.target.closest("[data-key]");
+    if(!kel) return;
+    if(!((extraEl && extraEl.contains(kel)) || chipsEl.contains(kel))) return;
+    const list = keyIdx[kel.dataset.key];
+    if(list && list.length){ touched = true; stop(); go(nextWith(list)); }
   });
+
+  root.addEventListener("keydown", e=>{
+    if(!frames.length) return;
+    const t = e.target;
+    const inField = t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA" ||
+                          t.tagName==="SELECT" || t.isContentEditable);
+    if(inField) return;                        /* поля й повзунок мають власні клавіші */
+    switch(e.key){
+      case "ArrowRight": touched=true; stop(); go(idx+1); break;
+      case "ArrowLeft":  touched=true; stop(); go(idx-1); break;
+      case "Home":       touched=true; stop(); go(0); break;
+      case "End":        touched=true; stop(); go(frames.length-1); break;
+      case " ": case "Spacebar":
+        if(t && t.tagName==="BUTTON") return;  /* пробіл на кнопці — це її натискання */
+        touched=true; play(); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
   root.querySelectorAll("[data-cfg]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{ stop(); rebuild(); });
+    inp.addEventListener("input", ()=>{ touched = true; stop(); rebuild(); });
   });
   root.querySelectorAll("[data-mode]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -271,11 +428,27 @@ function createPlayerWith(root, spec, cfg){
       root.querySelectorAll(`[data-mode][data-group="${group}"]`).forEach(b=>b.setAttribute("aria-pressed","false"));
       if(!group) root.querySelectorAll("[data-mode]:not([data-group])").forEach(b=>b.setAttribute("aria-pressed","false"));
       btn.setAttribute("aria-pressed","true");
-      stop(); rebuild();
+      touched = true; stop(); rebuild();
     });
   });
 
-  players.push({ root, stop, relock });
+  /* ---------- автостарт при прокрутці ----------
+     Один раз, коли віджет уперше опинився в екрані більш ніж наполовину.
+     Під prefers-reduced-motion не спрацьовує зовсім. */
+  if(!MO.reduced && "IntersectionObserver" in window){
+    const io = new IntersectionObserver(entries=>{
+      entries.forEach(en=>{
+        if(en.intersectionRatio < .55) return;
+        io.disconnect();
+        if(!touched && !raf && frames.length > 1) play();
+      });
+    }, { threshold:.55 });
+    io.observe(root);
+  }
+
+  /* stop у реєстрі ще й гасить рух: на схованій сторінці анімації не мають
+     доживати свій вік */
+  players.push({ root, relock, stop: ()=>{ stop(); MO.cancel(root); } });
   rebuild();
 }
 
@@ -293,17 +466,22 @@ const dictStr = (p) => p.length ? "{" + p.map(x=>`${q(x.k)}: ${q(x.v)}`).join(",
 const setStr  = (a) => a.length ? "{" + a.map(q).join(", ") + "}" : "set()";
 
 /* ================= блоки візуалізації ================= */
-/* комірки списку; state — об'єкт «індекс → клас» */
+/* Кожен рухомий блок несе data-key: за ним рушій руху впізнає деталь у
+   наступному кадрі й довозить її на нове місце, замість перемалювати.
+   Ключ комірки — індекс (типово) або саме значення, якщо список
+   перебудовується чи сортується: opts.keyBy = "value". */
 function cells(arr, opts){
   opts = opts || {};
   const st = opts.state || {};
+  const byVal = opts.keyBy === "value";
   if(!arr.length) return `<div class="lst"><div class="cellw"><div class="cell ghost">[ ]</div>` +
     (opts.noIndex ? "" : `<div class="ix">порожньо</div>`) + `</div></div>`;
   return `<div class="lst">` + arr.map((v,k)=>{
     const cls = st[k] || "";
     const on = (cls==="now"||cls==="hit") ? " on" : "";
     const ix = opts.noIndex ? "" : `<div class="ix">${k}</div>`;
-    return `<div class="cellw${on}"><div class="cell ${cls}">${esc(q(v))}</div>${ix}</div>`;
+    const key = esc(byVal ? String(v) : k);
+    return `<div class="cellw${on}" data-key="${key}"><div class="cell ${cls}">${esc(q(v))}</div>${ix}</div>`;
   }).join("") + `</div>`;
 }
 
@@ -319,7 +497,8 @@ function kv(pairs, opts){
   const st = opts.state || {};
   if(!pairs.length) return `<div class="kv"><div class="kv-empty">${esc(opts.empty || "{} — поки порожньо")}</div></div>`;
   return `<div class="kv">` + pairs.map((p,k)=>
-    `<div class="kvrow ${st[k]||""}"><span class="k">${esc(q(p.k))}</span><span class="sep">:</span>` +
+    `<div class="kvrow ${st[k]||""}" data-key="${esc(String(p.k))}">` +
+    `<span class="k">${esc(q(p.k))}</span><span class="sep">:</span>` +
     `<span class="v">${esc(q(p.v))}</span></div>`).join("") + `</div>`;
 }
 
@@ -328,7 +507,8 @@ function selems(arr, opts){
   opts = opts || {};
   const st = opts.state || {};
   if(!arr.length) return `<span class="kv-empty">${esc(opts.empty || "set() — поки порожньо")}</span>`;
-  return arr.map((v,k)=>`<span class="selem ${st[k]||opts.all||""}">${esc(String(v))}</span>`).join("");
+  return arr.map((v,k)=>
+    `<span class="selem ${st[k]||opts.all||""}" data-key="${esc(String(v))}">${esc(String(v))}</span>`).join("");
 }
 function setrow(label, html){
   return `<div class="setrow"><span class="setlabel">${esc(label)}</span>${html}</div>`;
@@ -354,7 +534,8 @@ function bars(items, maxSize){
   const mx = maxSize || Math.max(1, ...items.map(b=>b.size));
   if(!items.length) return `<div class="bars"><span class="kv-empty">поки порожньо</span></div>`;
   return `<div class="bars">` + items.map(b=>
-    `<div class="barw"><div class="bar ${b.cls||""}" style="height:${Math.round(24 + 76 * b.size / mx)}px">${esc(String(b.top||""))}</div>` +
+    `<div class="barw" data-key="${esc(String(b.key != null ? b.key : b.label))}">` +
+    `<div class="bar ${b.cls||""}" style="height:${Math.round(24 + 76 * b.size / mx)}px">${esc(String(b.top||""))}</div>` +
     `<span class="barlab">${esc(String(b.label))}</span></div>`).join("") + `</div>`;
 }
 
