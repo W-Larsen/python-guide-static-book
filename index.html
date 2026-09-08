@@ -697,6 +697,126 @@
     table.cmp{font-size:.86rem}
   }
 </style>
+<style>
+/* ==========================================================================
+   5. Функції: чорна скринька, стек викликів, області видимості
+   ========================================================================== */
+
+  /* ---------- hero: аргумент → функція → результат ---------- */
+  .fnhero{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px}
+  .fnpill{font-family:var(--mono); font-size:.92rem; font-weight:700; padding:10px 16px;
+    border-radius:9px; border:1.5px solid var(--rule); background:var(--panel); color:#b3bcc7;
+    min-width:58px; text-align:center; border-style:dashed;
+    transition:border-color .25s, background .25s, color .25s, transform .25s}
+  .fnpill.on{border-style:solid}
+  .fnpill.arg.on{border-color:#b9a2f5; background:var(--i-soft); color:var(--i)}
+  .fnpill.ret.on{border-color:#8ecfc6; background:var(--j-soft); color:var(--j); transform:scale(1.06)}
+  .fnbox{font-family:var(--mono); font-size:.86rem; padding:13px 18px; border-radius:11px;
+    border:2px solid var(--rule); background:#fff; color:var(--ink); text-align:center;
+    transition:border-color .25s, box-shadow .25s}
+  .fnbox b{display:block; font-size:.72rem; font-weight:600; color:var(--muted); margin-top:3px}
+  .fnbox.work{border-color:var(--i); box-shadow:0 0 0 5px var(--i-soft)}
+  .fnwire{position:relative; width:32px; height:2px; flex:none; border-radius:2px;
+    background:var(--rule); transition:background .25s}
+  .fnwire::after{content:""; position:absolute; right:-2px; top:-4px;
+    border-left:8px solid var(--rule); border-top:5px solid transparent;
+    border-bottom:5px solid transparent; transition:border-left-color .25s}
+  .fnwire.on{background:var(--i)}
+  .fnwire.on::after{border-left-color:var(--i)}
+  .fnwire.back{background:var(--j)}
+  .fnwire.back::after{border-left-color:var(--j)}
+  @media (max-width:520px){ .fnwire{width:20px} .fnpill{padding:8px 11px; min-width:46px} }
+
+  /* ---------- пам'ять: визначені функції ---------- */
+  .fnmem{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start}
+  .fnobj{border:1.5px solid var(--rule); border-radius:10px; background:#fff; padding:9px 14px;
+    font-family:var(--mono); font-size:.76rem; color:var(--muted); line-height:1.5;
+    transition:border-color .2s, background .2s, opacity .2s}
+  .fnobj .nm{display:block; font-size:.84rem; font-weight:700; color:var(--i); margin-bottom:3px}
+  .fnobj.ghost{border-style:dashed; background:var(--panel); opacity:.5}
+  .fnobj.ghost .nm{color:#b3bcc7}
+  .fnobj.run{border-color:var(--i); background:var(--i-soft)}
+
+  /* ---------- стек викликів ---------- */
+  /* column-reverse — кадри ростуть угору, як справжній стек */
+  .stack{display:flex; flex-direction:column-reverse; gap:6px; align-items:stretch; max-width:420px}
+  .frame{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:.79rem;
+    padding:8px 13px; border-radius:9px; border:1.5px solid var(--rule); background:#fff;
+    color:var(--muted); transition:border-color .2s, background .2s, color .2s, transform .2s}
+  .frame .fnm{font-weight:700}
+  .frame .ret{margin-left:auto; font-size:.7rem; color:#9aa4b0}
+  .frame.top{border-color:var(--i); background:var(--i-soft); color:var(--i); transform:translateX(4px)}
+  .frame.top .ret{color:var(--i)}
+  .frame.base{border-style:dashed; background:var(--panel); color:#9aa4b0}
+  .frame.leaving{border-color:#eab5ae; background:#fdeeec; color:var(--stop)}
+  .stackhint{font-family:var(--mono); font-size:.73rem; color:#b3bcc7; padding:4px 0 0}
+
+  /* ---------- області видимості ---------- */
+  .scopes{display:flex; gap:12px; flex-wrap:wrap; align-items:stretch}
+  .scope{flex:1 1 190px; min-width:0; border:1.5px solid var(--rule); border-radius:11px;
+    background:#fff; padding:10px 13px 12px;
+    transition:border-color .2s, background .2s, opacity .2s}
+  .scope.local{border-color:#b9a2f5; background:var(--i-soft)}
+  .scope.gone{opacity:.34; border-style:dashed; background:var(--panel)}
+  .scope-t{font-family:var(--mono); font-size:.71rem; font-weight:700; color:#8a95a2;
+    margin-bottom:8px; letter-spacing:.02em}
+  .scope.local .scope-t{color:var(--i)}
+  .svars{display:flex; flex-wrap:wrap; gap:6px}
+  .svar{font-family:var(--mono); font-size:.78rem; padding:4px 10px; border-radius:7px;
+    border:1.5px solid var(--rule); background:#fff; color:var(--body);
+    transition:border-color .2s, background .2s, color .2s}
+  .svar.hit{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
+  .svar.now{border-color:var(--i); background:#fff; color:var(--i); font-weight:700}
+  .svar.err{border-color:#eab5ae; background:#fdeeec; color:var(--stop); font-weight:700}
+  .svar.empty{border-style:dashed; color:#b3bcc7}
+
+  /* ---------- склеювання аргументів print ---------- */
+  .joinviz{display:flex; flex-wrap:wrap; align-items:center; gap:5px;
+    font-family:var(--mono); font-size:.82rem}
+  .jtok{padding:5px 11px; border:1.5px solid var(--rule); border-radius:7px; background:#fff;
+    color:var(--body); transition:border-color .2s, background .2s}
+  .jtok.now{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700}
+  .jsep{padding:5px 9px; border:1.5px dashed var(--hl-bar); border-radius:7px; background:var(--hl);
+    color:#5c4600; font-weight:700; white-space:pre}
+  .jsep.nl{font-style:normal}
+
+  /* ---------- try / except ---------- */
+  .tryviz{display:flex; flex-direction:column; gap:7px; max-width:460px}
+  .tryblk{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:.79rem;
+    padding:9px 13px; border-radius:9px; border:1.5px solid var(--rule); background:#fff;
+    color:var(--muted); transition:border-color .2s, background .2s, color .2s, opacity .2s}
+  .tryblk .tag{font-size:.68rem; font-weight:700; color:#9aa4b0; flex:none; width:52px}
+  .tryblk.idle{opacity:.4; border-style:dashed}
+  .tryblk.run{border-color:var(--hl-bar); background:var(--hl); color:#5c4600}
+  .tryblk.ok{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
+  .tryblk.boom{border-color:#eab5ae; background:#fdeeec; color:var(--stop); font-weight:700}
+  .tryblk.ok .tag,.tryblk.boom .tag{color:inherit}
+
+  /* ---------- ілюстрація картки «Функції» ---------- */
+  .vz-fbox{fill:#fff; stroke:var(--rule); stroke-width:1.8; transition:stroke .25s, fill .25s}
+  .vz-fbox.work{fill:var(--i-soft); stroke:var(--i); stroke-width:2.2}
+  .vz-fname{font-size:12.5px; font-weight:700; fill:var(--ink); text-anchor:middle}
+  .vz-fsub{font-size:10px; fill:var(--muted); text-anchor:middle}
+  .vz-fpill{fill:var(--panel); stroke:var(--rule); stroke-width:1.5; stroke-dasharray:5 4;
+    transition:fill .3s, stroke .3s}
+  .vz-fpill.on{stroke-dasharray:none}
+  .vz-fpill.arg.on{fill:var(--i-soft); stroke:var(--i)}
+  .vz-fpill.ret.on{fill:var(--j-soft); stroke:var(--j)}
+  .vz-fpt{font-size:14px; font-weight:700; fill:#b3bcc7; text-anchor:middle; transition:fill .3s}
+  .vz-fpt.arg.on{fill:var(--i)}
+  .vz-fpt.ret.on{fill:var(--j)}
+  .vz-fwire{stroke:var(--rule); stroke-width:1.8; fill:none; transition:stroke .3s}
+  .vz-fwire.on{stroke:var(--i)}
+  .vz-fwire.done{stroke:var(--j)}
+  .vz-fhead{fill:var(--rule); transition:fill .3s}
+  .vz-fhead.on{fill:var(--i)}
+  .vz-fhead.done{fill:var(--j)}
+  .vz-fdot{fill:var(--i); opacity:0}
+  .vz-fdot.back{fill:var(--j)}
+  .vz-fdot.go{animation:vzfmove .7s ease forwards}
+  @keyframes vzfmove{0%{opacity:0; transform:translateX(0)}25%{opacity:1}
+    100%{opacity:1; transform:translateX(26px)}}
+</style>
 </head>
 <body data-route="home">
 
@@ -810,6 +930,34 @@
             <h3>Цикли: for і while</h3>
             <p>Чому <code>range(5)</code> — це не п'ятірка, як працює <code>break</code>, і що насправді відбувається, коли один цикл стоїть усередині іншого.</p>
             <div class="card-meta"><span>5 віджетів</span><span>break / continue</span><span>вкладені цикли</span></div>
+            <div class="card-go">Читати тему <em>→</em></div>
+          </div>
+        </a>
+
+        <a class="card reveal" href="#/func" data-viz="func">
+          <div class="card-viz">
+            <svg viewBox="0 0 320 152" class="viz viz-func" aria-hidden="true">
+              <text class="vz-code" x="14" y="20" data-line>square(4)</text>
+              <rect class="vz-fpill arg" data-pill="a" x="8" y="56" width="64" height="36" rx="10"/>
+              <text class="vz-fpt arg" data-pt="a" x="40" y="79">?</text>
+              <path class="vz-fwire" data-w="1" d="M76 74 H104"/>
+              <polygon class="vz-fhead" data-h="1" points="110,74 102,69 102,79"/>
+              <circle class="vz-fdot" data-dot="in" cx="80" cy="74" r="4.5"/>
+              <rect class="vz-fbox" data-box="f" x="114" y="44" width="94" height="60" rx="12"/>
+              <text class="vz-fname" x="161" y="70">square</text>
+              <text class="vz-fsub" x="161" y="87">return n * n</text>
+              <path class="vz-fwire" data-w="2" d="M212 74 H240"/>
+              <polygon class="vz-fhead" data-h="2" points="246,74 238,69 238,79"/>
+              <circle class="vz-fdot back" data-dot="out" cx="216" cy="74" r="4.5"/>
+              <rect class="vz-fpill ret" data-pill="r" x="250" y="56" width="64" height="36" rx="10"/>
+              <text class="vz-fpt ret" data-pt="r" x="282" y="79">?</text>
+              <text class="vz-line" x="14" y="136" data-note>виклик функції</text>
+            </svg>
+          </div>
+          <div class="card-body">
+            <h3>Функції</h3>
+            <p>Свій блок коду з іменем: чим <code>return</code> відрізняється від <code>print</code>, звідки береться <code>None</code>, як влаштований стек викликів і чому змінна з функції не видна ззовні.</p>
+            <div class="card-meta"><span>8 віджетів</span><span>стек викликів</span><span>try / except</span></div>
             <div class="card-go">Читати тему <em>→</em></div>
           </div>
         </a>
@@ -1223,6 +1371,228 @@
   </div>
   </section>
 
+
+  <!-- ================= тема: функції ================= -->
+  <section class="page" id="page-func" hidden>
+  <div class="wrap">
+
+  <header class="top">
+    <h1>Функції</h1>
+    <p class="lede">Функція — це шматок коду, якому дали ім'я. Один раз описав, далі просто кличеш на ім'я скільки завгодно разів. Найпростіше уявляти її як <b>чорну скриньку</b>: усередину заходять аргументи, назовні виходить результат.</p>
+  </header>
+
+  <div class="hero" id="func-hero">
+    <div class="fnhero">
+      <span class="fnpill arg on" id="func-heroArg">4</span>
+      <span class="fnwire on" id="func-heroW1"></span>
+      <span class="fnbox" id="func-heroBox">square(n)<b>return n * n</b></span>
+      <span class="fnwire back" id="func-heroW2"></span>
+      <span class="fnpill ret on" id="func-heroRet">16</span>
+    </div>
+    <div class="hero-line" id="func-heroLine">square(4) повертає 16</div>
+    <button class="ctl replay" id="func-heroBtn">Показати ще раз</button>
+  </div>
+
+  <h2>Навіщо взагалі функції</h2>
+  <p>Уяви програму, яка в п'яти різних місцях вітається з користувачем однаковими трьома рядками. П'ятнадцять рядків коду замість трьох. А тепер уяви, що привітання треба змінити — доведеться шукати всі п'ять місць і нічого не забути.</p>
+  <p>Функція вирішує обидві проблеми одразу: код лежить в одному місці, а в решті програми стоїть лише виклик. Виправив усередині — виправилось усюди.</p>
+  <p>Друга причина важливіша за економію рядків: функція <b>ховає складність</b>. Коли ти пишеш <code>len("привіт")</code>, тебе не цікавить, як саме Python рахує символи. Ти знаєш лише, що на вході рядок, а на виході число. Свої функції працюють так само.</p>
+
+  <h2>def: як створити функцію</h2>
+  <p>Функція описується інструкцією <code>def</code>. Після імені йдуть дужки й двокрапка, а тіло — з відступом, точно як у циклах та умовах.</p>
+  <p>Найважливіше на цьому кроці: <b><code>def</code> нічого не виконує</b>. Він лише каже Python: «запам'ятай, що є така функція». Рядки всередині оживають тільки тоді, коли функцію викличуть — тобто напишуть її ім'я з дужками.</p>
+  <p>Понатискай «Крок» і простеж, у якому порядку виконуються рядки. Зверни увагу, як виконання стрибає вниз до виклику, потім повертається вгору в тіло — і так щоразу.</p>
+
+  <div class="widget" id="func-w-def" tabindex="0"></div>
+
+  <div class="callout">
+    <p><b>Ім'я без дужок — це не виклик.</b> <code>hello</code> — це сама функція як значення, її можна покласти в змінну. <code>hello()</code> — це наказ виконати її. Забуті дужки — класична помилка: програма мовчить, ніби нічого й не було.</p>
+  </div>
+
+  <h2>Аргументи й параметри</h2>
+  <p>Функція без входу вміє лише одне й те саме. Щоб вона працювала з різними даними, у дужках пишуть <b>параметри</b> — імена, під якими всередині лежатимуть отримані значення.</p>
+  <p>Два слова, які плутають майже всі:</p>
+  <ul>
+    <li><b>Параметр</b> — ім'я в дужках при <em>оголошенні</em>: <code>def greet(name):</code></li>
+    <li><b>Аргумент</b> — значення в дужках при <em>виклику</em>: <code>greet("Оля")</code></li>
+  </ul>
+  <p>Під час виклику аргумент присвоюється параметру, ніби всередині функції виконався рядок <code>name = "Оля"</code>. І щойно функція закінчиться, це ім'я зникає.</p>
+
+  <div class="widget" id="func-w-args" tabindex="0"></div>
+
+  <div class="callout">
+    <p><b>Спробуй сам:</b> перемкни на два параметри й подивись у блоці внизу, як значення розподіляються по місцях. Порядок має значення: перший аргумент іде в перший параметр, другий — у другий.</p>
+  </div>
+
+  <h2>return: функція, яка щось віддає</h2>
+  <p><code>print</code> усередині функції показує текст на екрані — і на цьому все. Такий результат неможливо додати, порівняти чи покласти в змінну. Щоб функція <em>віддала</em> значення в програму, потрібен <code>return</code>.</p>
+  <p><code>return</code> робить дві речі одночасно: він <b>негайно завершує функцію</b> й <b>підставляє значення на місце виклику</b>. Тобто вираз <code>square(4)</code> після повернення перетворюється просто на <code>16</code>, і далі з ним можна робити що завгодно.</p>
+  <p>Перемкни режим у віджеті й порівняй: ліворуч у коді змінюється лише одне слово, а поведінка програми — повністю.</p>
+
+  <div class="widget" id="func-w-return" tabindex="0"></div>
+
+  <h3>None — значення «нічого»</h3>
+  <p>Якщо функція завершилась без <code>return</code>, вона все одно щось повертає — спеціальне значення <code>None</code>. Python мовчки дописує <code>return None</code> в кінець будь-якої функції, де його немає.</p>
+  <p><code>None</code> — це не нуль, не порожній рядок і не <code>False</code>. Це єдине значення типу <code>NoneType</code>, яке означає «тут немає значення». Саме тому <code>x = print("Привіт")</code> кладе в <span class="vi">x</span> не текст, а <code>None</code>: <code>print</code> малює на екрані, але нічого не віддає.</p>
+
+  <div class="callout warn">
+    <p><b>Типова пастка.</b> <code>result = my_list.sort()</code> дасть <code>None</code>, бо <code>sort()</code> сортує список на місці й нічого не повертає. Якщо десь несподівано з'явився <code>None</code> — майже завжди це функція без <code>return</code>.</p>
+  </div>
+
+  <h2>Іменовані аргументи: sep і end</h2>
+  <p>Зазвичай аргументи розпізнаються за позицією. Але є й другий спосіб — назвати аргумент прямо у виклику: <code>print("Привіт", end="")</code>. Такі аргументи майже завжди необов'язкові: у них є типове значення, і пишуть їх лише тоді, коли треба відхилитись від звичної поведінки.</p>
+  <p>У <code>print</code> таких аргументів два. <code>sep</code> — чим склеювати значення між собою (типово пробіл). <code>end</code> — що поставити в кінці (типово перехід на новий рядок).</p>
+
+  <div class="widget" id="func-w-kwargs" tabindex="0"></div>
+
+  <h2>Стек викликів</h2>
+  <p>Коли одна функція викликає іншу, а та — ще одну, Python має якось пам'ятати дорогу назад. Для цього він веде <b>стек викликів</b>: на кожен виклик кладеться згори <b>кадр</b> із запам'ятованим місцем повернення й локальними змінними.</p>
+  <p>Стек — це стос тарілок. Нову кладемо зверху, беремо теж лише зверху. Функція завершилась — її кадр знімається, і виконання повертається рівно туди, звідки прийшло.</p>
+  <p>У віджеті нижче праворуч видно сам стос. Простеж, як він росте вглиб і як стискається назад.</p>
+
+  <div class="widget" id="func-w-stack" tabindex="0"></div>
+
+  <div class="callout">
+    <p><b>Звідки береться «RecursionError».</b> Якщо функція викликає сама себе без умови зупинки, кадри кладуться на стек нескінченно, поки не скінчиться відведене місце. Python зупиняє це приблизно на тисячному кадрі й повідомляє про переповнення стека.</p>
+  </div>
+
+  <h2>Локальна й глобальна області видимості</h2>
+  <p>Змінні, створені всередині функції, живуть у її <b>локальній області</b>. Вони народжуються при виклику й зникають, коли функція завершується. Змінні поза всіма функціями живуть у <b>глобальній області</b> й доступні всюди.</p>
+  <p>Із цього випливають чотири правила:</p>
+  <ul>
+    <li>глобальний код <b>не бачить</b> локальних змінних;</li>
+    <li>одна функція <b>не бачить</b> локальних змінних іншої функції;</li>
+    <li>функція <b>може читати</b> глобальні змінні;</li>
+    <li>в різних областях можуть жити <b>різні змінні з однаковим іменем</b> — це не конфлікт, це просто дві різні коробки.</li>
+  </ul>
+  <p>Останнє правило й породжує більшість плутанини. Перемикай режими у віджеті й дивись на дві панелі внизу: ліворуч глобальна область, праворуч — локальна, яка з'являється й зникає разом із викликом.</p>
+
+  <div class="widget" id="func-w-scope" tabindex="0"></div>
+
+  <h3>Навіщо взагалі це розділення</h3>
+  <p>Ізоляція — це і є головна цінність функції. Якщо код усередині може зіпсувати лише свої змінні, то помилка залишається всередині коробки. Коли шукаєш баг, коло підозрюваних звужується з усієї програми до одного невеликого тіла функції.</p>
+
+  <h2>global: коли треба змінити глобальну змінну</h2>
+  <p>Присвоєння всередині функції завжди створює <b>локальну</b> змінну — навіть якщо зовні є глобальна з таким самим іменем. Щоб сказати «ні, я маю на увазі саме ту, зовнішню», на початку функції пишуть <code>global ім'я</code>.</p>
+  <p>Як Python вирішує, локальна змінна чи глобальна:</p>
+  <ul>
+    <li>оголошена поза всіма функціями → глобальна;</li>
+    <li>у функції є <code>global x</code> → глобальна;</li>
+    <li>у функції їй щось присвоюють → локальна;</li>
+    <li>у функції її лише читають → глобальна.</li>
+  </ul>
+
+  <div class="widget" id="func-w-global" tabindex="0"></div>
+
+  <div class="callout warn">
+    <p><b>UnboundLocalError</b> виникає, коли в одній функції змінну спершу читають, а нижче їй присвоюють. Python дивиться на все тіло <em>заздалегідь</em>: побачив присвоєння — значить, змінна локальна на всій довжині функції. І в момент читання вона ще порожня. Перемкни віджет у третій режим, щоб побачити це покроково.</p>
+  </div>
+
+  <p>Користуватись <code>global</code> варто рідко. Коли глобальну змінну міняють кілька функцій, стає майже неможливо зрозуміти, хто саме зіпсував значення. Надійніше передати значення аргументом і забрати назад через <code>return</code>.</p>
+
+  <h2>try та except: коли щось іде не так</h2>
+  <p>Помилка під час виконання зупиняє програму повністю. Але часто помилка очікувана: користувач ввів букви замість числа, файлу немає, дільник виявився нулем. Такі випадки перехоплюють конструкцією <code>try</code> / <code>except</code>.</p>
+  <p>У <code>try</code> кладуть код, який може впасти. У <code>except</code> — що робити, якщо він таки впав. Якщо помилки не було, блок <code>except</code> просто пропускається.</p>
+  <p>Важлива деталь: після спрацювання <code>except</code> програма <b>не зупиняється</b>, а спокійно йде далі з наступного рядка.</p>
+
+  <div class="widget" id="func-w-try" tabindex="0"></div>
+
+  <div class="callout">
+    <p><b>Чому важливо називати тип помилки.</b> <code>except ZeroDivisionError</code> ловить лише ділення на нуль. Голий <code>except:</code> ловить геть усе — включно з твоїми ж описками в іменах змінних, які після цього тихо зникнуть замість того, щоб чесно впасти.</p>
+  </div>
+
+  <h2>Перевір себе</h2>
+
+  <div class="task">
+    <p>1. Що виведе ця програма?</p>
+    <pre>def show():
+    print("всередині")
+
+print("до")
+show()
+print("після")</pre>
+    <button class="ctl" data-answer="func-a1">Показати відповідь</button>
+    <div class="answer" id="func-a1"><p><code>до</code>, <code>всередині</code>, <code>після</code>. Рядок <code>def</code> лише реєструє функцію й нічого не друкує — тіло виконується тільки в момент виклику <code>show()</code>.</p></div>
+  </div>
+
+  <div class="task">
+    <p>2. Що потрапить у <code>x</code>?</p>
+    <pre>def add(a, b):
+    print(a + b)
+
+x = add(2, 3)
+print(x)</pre>
+    <button class="ctl" data-answer="func-a2">Показати відповідь</button>
+    <div class="answer" id="func-a2"><p>Спершу надрукується <code>5</code>, а потім <code>None</code>. Функція друкує суму, але не повертає її: замість <code>print(a + b)</code> мало б бути <code>return a + b</code>.</p></div>
+  </div>
+
+  <div class="task">
+    <p>3. Чому цей код падає з помилкою?</p>
+    <pre>def count():
+    total = 10
+
+count()
+print(total)</pre>
+    <button class="ctl" data-answer="func-a3">Показати відповідь</button>
+    <div class="answer" id="func-a3"><p><code>NameError</code>. Змінна <code>total</code> локальна: вона існувала лише поки працювала <code>count()</code>, і зникла разом із її кадром у стеку. Глобальний код її не бачить.</p></div>
+  </div>
+
+  <div class="task">
+    <p>4. Що надрукується в кінці?</p>
+    <pre>def change():
+    n = 99
+
+n = 1
+change()
+print(n)</pre>
+    <button class="ctl" data-answer="func-a4">Показати відповідь</button>
+    <div class="answer" id="func-a4"><p><code>1</code>. Усередині <code>change()</code> присвоєння створило нову <b>локальну</b> <code>n</code>, глобальної воно не торкнулось. Щоб змінити зовнішню, потрібен рядок <code>global n</code>.</p></div>
+  </div>
+
+  <div class="task">
+    <p>5. Скільки разів виконається <code>return</code> і що поверне функція?</p>
+    <pre>def sign(x):
+    if x &gt; 0:
+        return "плюс"
+    return "не плюс"
+
+print(sign(5))</pre>
+    <button class="ctl" data-answer="func-a5">Показати відповідь</button>
+    <div class="answer" id="func-a5"><p>Спрацює лише перший <code>return</code>, функція поверне <code>"плюс"</code>. <code>return</code> завершує функцію негайно — другий рядок для <code>x = 5</code> навіть не розглядатиметься.</p></div>
+  </div>
+
+  <div class="task">
+    <p>6. Що виведе програма?</p>
+    <pre>def risky(n):
+    try:
+        return 10 / n
+    except ZeroDivisionError:
+        return "нуль"
+
+print(risky(2))
+print(risky(0))
+print("кінець")</pre>
+    <button class="ctl" data-answer="func-a6">Показати відповідь</button>
+    <div class="answer" id="func-a6"><p><code>5.0</code>, потім <code>нуль</code>, потім <code>кінець</code>. Помилка перехоплена, тож програма не падає й доходить до останнього рядка.</p></div>
+  </div>
+
+  <h2>Шпаргалка</h2>
+  <table class="cheat">
+    <tr><td>def f():</td><td>оголошення функції — тіло поки не виконується</td></tr>
+    <tr><td>f()</td><td>виклик: саме тут тіло й запрацює</td></tr>
+    <tr><td>def f(a, b):</td><td>a і b — параметри</td></tr>
+    <tr><td>f(2, 3)</td><td>2 і 3 — аргументи, стають значеннями a і b</td></tr>
+    <tr><td>return x</td><td>віддати значення й негайно вийти з функції</td></tr>
+    <tr><td>return</td><td>просто вийти; поверне None</td></tr>
+    <tr><td>None</td><td>«немає значення»; тип NoneType</td></tr>
+    <tr><td>print(a, b, sep="-")</td><td>чим склеювати аргументи між собою</td></tr>
+    <tr><td>print(a, end="")</td><td>без переходу на новий рядок</td></tr>
+    <tr><td>global x</td><td>у цій функції x — глобальна змінна</td></tr>
+    <tr><td>try: / except E:</td><td>перехопити помилку типу E й не впасти</td></tr>
+  </table>
+
+  </div>
+  </section>
 
   <!-- ================= тема: колекції (огляд) ================= -->
   <section class="page" id="page-coll" hidden>
@@ -1871,14 +2241,16 @@ const ROUTES = [
     nav:"Умови: if, elif, else", title:"Умови в Python — if, elif, else" },
   { slug:"loops", id:"page-loops", num:"03",
     nav:"Цикли: for і while",    title:"Цикли в Python — покроково" },
-  { slug:"coll",  id:"page-coll",  num:"04",
+  { slug:"func",  id:"page-func",  num:"04",
+    nav:"Функції",               title:"Функції в Python — def, return, стек викликів" },
+  { slug:"coll",  id:"page-coll",  num:"05",
     nav:"Колекції",              title:"Колекції в Python — списки, словники, множини",
     kids:[
-      { slug:"list", id:"page-list", num:"4.1",
+      { slug:"list", id:"page-list", num:"5.1",
         nav:"Списки",   title:"Списки в Python — індекси, зрізи, sorted, map, filter" },
-      { slug:"dict", id:"page-dict", num:"4.2",
+      { slug:"dict", id:"page-dict", num:"5.2",
         nav:"Словники", title:"Словники в Python — ключ, значення і вбудовані функції" },
-      { slug:"set",  id:"page-set",  num:"4.3",
+      { slug:"set",  id:"page-set",  num:"5.3",
         nav:"Множини",  title:"Множини в Python — набір без повторів" }
     ]}
 ];
@@ -2216,9 +2588,53 @@ function vizDict(svg){
   ]);
 }
 
+/* --- 5. функції --- */
+function vizFunc(svg){
+  const line = $("[data-line]", svg), note = $("[data-note]", svg), box = $('[data-box="f"]', svg);
+  const pA = $('[data-pill="a"]', svg), tA = $('[data-pt="a"]', svg);
+  const pR = $('[data-pill="r"]', svg), tR = $('[data-pt="r"]', svg);
+  const w1 = $('[data-w="1"]', svg), h1 = $('[data-h="1"]', svg);
+  const w2 = $('[data-w="2"]', svg), h2 = $('[data-h="2"]', svg);
+  const dIn = $('[data-dot="in"]', svg), dOut = $('[data-dot="out"]', svg);
+  const VALS = [4, 7, 9, 12];
+  let n = 0, v = VALS[0];
+  const set = (el, cls) => el.setAttribute("class", cls);
+
+  return cycler([
+    { d:700, run(){
+        v = VALS[n % VALS.length]; n++;
+        set(pA,"vz-fpill arg"); set(tA,"vz-fpt arg"); tA.textContent = "?";
+        set(pR,"vz-fpill ret"); set(tR,"vz-fpt ret"); tR.textContent = "?";
+        set(box,"vz-fbox");
+        set(w1,"vz-fwire"); set(h1,"vz-fhead"); set(w2,"vz-fwire"); set(h2,"vz-fhead");
+        set(dIn,"vz-fdot"); set(dOut,"vz-fdot back");
+        line.textContent = "square(" + v + ")";
+        note.textContent = "виклик функції";
+      }},
+    { d:800, run(){
+        set(pA,"vz-fpill arg on"); set(tA,"vz-fpt arg on"); tA.textContent = v;
+        note.textContent = "аргумент " + v + " готовий";
+      }},
+    { d:850, run(){
+        set(w1,"vz-fwire on"); set(h1,"vz-fhead on"); restart(dIn,"go");
+        note.textContent = "n = " + v + " — заходимо всередину";
+      }},
+    { d:800, run(){ set(box,"vz-fbox work"); note.textContent = "усередині: n * n"; }},
+    { d:850, run(){
+        set(box,"vz-fbox"); set(w2,"vz-fwire done"); set(h2,"vz-fhead done"); restart(dOut,"go");
+        note.textContent = "return віддає результат";
+      }},
+    { d:2000, run(){
+        set(pR,"vz-fpill ret on"); set(tR,"vz-fpt ret on"); tR.textContent = v * v;
+        line.textContent = "square(" + v + ") → " + (v * v);
+        note.textContent = "значення стало на місце виклику";
+      }}
+  ]);
+}
+
 const VIZ = {};
 (function initViz(){
-  const map = { vars: vizVars, cond: vizCond, loops: vizLoop, dicts: vizDict };
+  const map = { vars: vizVars, cond: vizCond, loops: vizLoop, func: vizFunc, dicts: vizDict };
   $$("[data-viz]").forEach(card=>{
     const kind = card.dataset.viz;
     const svg = $("svg", card);
@@ -3314,6 +3730,612 @@ createPlayer(document.getElementById("loops-w-nested"), {
     el: btn,
     stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
     start(){ clearTimeout(auto); auto = setTimeout(run, 600); }
+  });
+})();
+
+};
+</script>
+
+
+<script>
+"use strict";
+window.PageInit["func"] = function(){
+
+const CK  = window.CollKit;
+const esc = CK.esc;
+const R   = (n) => Array.from({length:n}, (_,k)=>k);
+
+/* Підсвітка: до набору CollKit додано слова, які живуть лише в цій темі
+   (def уже є, а try / except / global — ні). */
+const KW = /\b(def|return|if|elif|else|for|in|while|not|and|or|True|False|None|try|except|finally|raise|global|pass|import|from|is)\b/g;
+const FN = /\b(print|len|int|str|float|input|range|round|abs|type|sorted|sum|ZeroDivisionError|ValueError|NameError|TypeError|UnboundLocalError)\b/g;
+
+function hl(line){
+  let s = esc(line), cmt = null, inq = false, ci = -1;
+  for(let k = 0; k < s.length; k++){
+    const c = s[k];
+    if(c === '"') inq = !inq;
+    else if(c === "#" && !inq){ ci = k; break; }
+  }
+  if(ci >= 0){ cmt = s.slice(ci); s = s.slice(0, ci); }
+  const lits = [];
+  s = s.replace(/"[^"]*"/g, m => {
+    lits.push(m);
+    return "\u0001" + String.fromCharCode(64 + lits.length) + "\u0001";
+  });
+  s = s.replace(KW, '<span class="kw">$1</span>');
+  s = s.replace(FN, '<span class="fn">$1</span>');
+  s = s.replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+  s = s.replace(/\u0001([A-Z])\u0001/g, (m, k) => `<span class="str">${lits[k.charCodeAt(0) - 65]}</span>`);
+  return s + (cmt ? `<span class="cmt">${cmt}</span>` : "");
+}
+
+const createPlayer = CK.makePlayer({ hl, tick:660 });
+const { numCfg, modeCfg } = CK;
+
+/* Текст із поля налаштувань. Лапки вирізаємо: значення підставляється
+   всередину рядкового літерала в коді, і чужа лапка розірвала б його. */
+function txtCfg(root, sel, fallback, max){
+  const el = root.querySelector(sel);
+  if(!el) return fallback;
+  const v = String(el.value).replace(/["\\]/g, "").trim().slice(0, max || 12);
+  return v || fallback;
+}
+
+/* ================= спільні блоки візуалізації ================= */
+
+/* чорна скринька: аргумент → функція → результат */
+function boxViz(b){
+  b = b || {};
+  const arg = b.arg == null ? "?" : String(b.arg);
+  const ret = b.ret == null ? "?" : String(b.ret);
+  return `<div class="fnhero">` +
+    `<span class="fnpill arg${b.arg == null ? "" : " on"}">${esc(arg)}</span>` +
+    `<span class="fnwire${b.in ? " on" : ""}"></span>` +
+    `<span class="fnbox${b.work ? " work" : ""}">${esc(b.name || "square(n)")}` +
+      `<b>${esc(b.body || "")}</b></span>` +
+    `<span class="fnwire${b.out ? " back" : ""}"></span>` +
+    `<span class="fnpill ret${b.ret == null ? "" : " on"}">${esc(ret)}</span>` +
+  `</div>`;
+}
+
+/* дві панелі: глобальна область і локальна область функції */
+function scopeViz(list){
+  return `<div class="scopes">` + (list || []).map(s =>
+    `<div class="scope${s.local ? " local" : ""}${s.gone ? " gone" : ""}">` +
+      `<div class="scope-t">${esc(s.t)}</div>` +
+      `<div class="svars">` + ((s.vars && s.vars.length)
+        ? s.vars.map(v => `<span class="svar ${v.cls || ""}">${esc(v.name)} = ${esc(v.val)}</span>`).join("")
+        : `<span class="svar empty">${esc(s.empty || "порожньо")}</span>`) +
+      `</div></div>`).join("") + `</div>`;
+}
+
+/* коробочки параметрів: значення зверху, ім'я параметра знизу */
+function paramViz(list){
+  if(!list || !list.length)
+    return `<div class="lst"><div class="cellw"><div class="cell ghost">немає</div>` +
+           `<div class="ix">параметрів</div></div></div>`;
+  return `<div class="lst">` + list.map(p =>
+    `<div class="cellw${p.cls === "now" ? " on" : ""}"><div class="cell ${p.cls || ""}">${esc(p.val)}</div>` +
+    `<div class="ix">${esc(p.name)}</div></div>`).join("") + `</div>`;
+}
+
+/* ================= 1. def проти виклику ================= */
+createPlayer(document.getElementById("func-w-def"), {
+  config:`<label>викликів <input type="number" data-cfg id="func-df-n" value="2" min="1" max="4"></label>`,
+  readCfg:(r)=>({ n: numCfg(r, "#func-df-n", 2) }),
+  build:({n})=>{
+    const code = [
+      `def hello():`,
+      `    print("Доброго ранку!")`,
+      `    print("Гарного дня!")`,
+      ``
+    ].concat(R(n).map(()=>`hello()`));
+    const callLine = (k) => 4 + k;
+    const out = [], frames = [];
+
+    frames.push({line:0, out:[], def:false,
+      note:`Виконання на рядку def. Python зараз лише прочитає опис функції — і все.`});
+    frames.push({line:0, out:[], def:true,
+      note:`Функція збережена в пам'яті під іменем hello. Зверни увагу: консоль порожня, жоден рядок тіла не виконався.`});
+
+    R(n).forEach(k=>{
+      frames.push({line:callLine(k), out:[...out], def:true, run:true,
+        note:`Виклик №${k+1}: hello(). Ось тепер виконання стрибає вгору, у тіло функції.`});
+      out.push("Доброго ранку!");
+      frames.push({line:1, out:[...out], def:true, run:true, note:`Перший рядок тіла.`});
+      out.push("Гарного дня!");
+      frames.push({line:2, out:[...out], def:true, run:true,
+        note:`Другий рядок тіла. Тіло закінчилось.`});
+      frames.push({line:callLine(k), out:[...out], def:true,
+        note:`Функція завершилась — повертаємось у той самий рядок, звідки її викликали.`});
+    });
+
+    frames.push({line:callLine(n-1), out:[...out], def:true, kind:"end",
+      note:`Готово. Тіло описано один раз, а спрацювало ${n} раз(ів) — це і є вся суть функції.`});
+    return {code, frames};
+  },
+  extra:(f)=>`<div class="fnmem">` +
+    `<div class="fnobj${f.def ? (f.run ? " run" : "") : " ghost"}">` +
+      `<span class="nm">hello()</span>print("Доброго ранку!")<br>print("Гарного дня!")</div>` +
+    `<div class="stackhint">${f.def ? (f.run ? "виконується просто зараз" : "лежить у пам'яті, чекає на виклик")
+                                    : "ще не існує"}</div></div>`
+});
+
+/* ================= 2. аргументи й параметри ================= */
+createPlayer(document.getElementById("func-w-args"), {
+  config:`<span class="seg">
+      <button data-mode="one" aria-pressed="true">Один параметр</button>
+      <button data-mode="two" aria-pressed="false">Два параметри</button>
+    </span>
+    <label>ім'я <input type="text" data-cfg id="func-ag-name" value="Оля"></label>`,
+  readCfg:(r)=>({ mode:modeCfg(r), name:txtCfg(r, "#func-ag-name", "Оля") }),
+  build:({mode, name})=>{
+    const two = mode === "two";
+    const calls = two
+      ? [[name, "Привіт"], ["Іван", "Вітаю"]]
+      : [[name], ["Іван"]];
+    const pnames = two ? ["name", "greeting"] : ["name"];
+    const code = two
+      ? [`def greet(name, greeting):`, `    print(greeting, name)`, ``,
+         `greet("${name}", "Привіт")`, `greet("Іван", "Вітаю")`]
+      : [`def greet(name):`, `    print("Привіт,", name)`, ``,
+         `greet("${name}")`, `greet("Іван")`];
+    const out = [], frames = [];
+
+    frames.push({line:0, out:[], args:[], params:[],
+      note:`У дужках при оголошенні стоять параметри: ${pnames.map(p=>`«${p}»`).join(" і ")}. Це поки що просто імена — значень у них немає.`});
+
+    calls.forEach((a, k)=>{
+      const line = 3 + k;
+      frames.push({line, out:[...out], args:a, argSt:Object.fromEntries(a.map((_,i)=>[i,"now"])), params:[],
+        note:`Виклик greet(${a.map(x=>`"${x}"`).join(", ")}). Значення в дужках — це аргументи.`});
+      frames.push({line:0, out:[...out], args:a, argSt:{},
+        params:pnames.map((p,i)=>({name:p, val:`"${a[i]}"`, cls:"now"})),
+        vars:pnames.map((p,i)=>({name:p, val:`"${a[i]}"`, cls:"i"})),
+        note:`Аргументи прив'язались до параметрів по порядку — ніби всередині виконалось ${pnames.map((p,i)=>`${p} = "${a[i]}"`).join(", ")}.`});
+      out.push(two ? `${a[1]} ${a[0]}` : `Привіт, ${a[0]}`);
+      frames.push({line:1, out:[...out], args:a, argSt:{},
+        params:pnames.map((p,i)=>({name:p, val:`"${a[i]}"`, cls:""})),
+        vars:pnames.map((p,i)=>({name:p, val:`"${a[i]}"`, cls:"i"})),
+        note:`Тіло працює зі значеннями, які лежать у параметрах.`});
+      frames.push({line, out:[...out], args:[], params:[],
+        note:`Функція завершилась — параметри ${pnames.join(", ")} зникли разом із нею. Наступний виклик створить їх заново.`});
+    });
+
+    frames.push({line:4, out:[...out], args:[], params:[], kind:"end",
+      note:`Одне тіло — різні дані. Саме заради цього функції й дають параметри.`});
+    return {code, frames};
+  },
+  extra:(f)=>
+    CK.row("аргументи", CK.cells(f.args || [], {noIndex:true, state:f.argSt || {}}), "i") +
+    CK.row("параметри", paramViz(f.params))
+});
+
+/* ================= 3. return і None ================= */
+createPlayer(document.getElementById("func-w-return"), {
+  config:`<span class="seg">
+      <button data-mode="ret" aria-pressed="true">із return</button>
+      <button data-mode="pr" aria-pressed="false">із print</button>
+    </span>
+    <label>n <input type="number" data-cfg id="func-rt-n" value="4" min="0" max="12"></label>`,
+  readCfg:(r)=>({ mode:modeCfg(r), n:numCfg(r, "#func-rt-n", 4) }),
+  build:({mode, n})=>{
+    const sq = n * n, sq2 = sq * sq;
+    const isRet = mode === "ret";
+    const body = isRet ? `return n * n` : `print(n * n)`;
+    const code = [`def square(n):`, `    ${body}`, ``,
+                  `x = square(${n})`, `print("Результат:", x)`]
+                 .concat(isRet ? [`print(square(x))`] : []);
+    const bx = (o) => Object.assign({name:"square(n)", body}, o);
+    const out = [], frames = [];
+
+    frames.push({line:0, out:[], box:bx({}),
+      note:`Функція описана. Усередині коробки — одна дія, назовні поки нічого не заходило.`});
+    frames.push({line:3, out:[], box:bx({arg:n, in:true}),
+      note:`Виклик square(${n}). Аргумент ${n} заходить усередину й стає значенням параметра n.`});
+
+    if(isRet){
+      frames.push({line:1, out:[], vars:[{name:"n", val:n, cls:"i"}], box:bx({arg:n, in:true, work:true}),
+        note:`return ${n} * ${n} → ${sq}. Це дві дії одразу: порахувати значення й негайно вийти з функції.`});
+      frames.push({line:3, out:[], vars:[{name:"x", val:sq, cls:"j"}], box:bx({arg:n, out:true, ret:sq}),
+        note:`Значення ${sq} підставилось прямо на місце виклику — рядок перетворився на x = ${sq}.`});
+      out.push(`Результат: ${sq}`);
+      frames.push({line:4, out:[...out], vars:[{name:"x", val:sq, cls:"j"}], box:bx({arg:n, out:true, ret:sq}),
+        note:`Тепер результат — звичайне число в змінній. Його можна друкувати, додавати, порівнювати.`});
+      frames.push({line:5, out:[...out], vars:[{name:"x", val:sq, cls:"j"}], box:bx({arg:sq, in:true}),
+        note:`І ще раз, уже від самого x: square(${sq}). Результат однієї функції спокійно стає аргументом наступної.`});
+      frames.push({line:1, out:[...out], vars:[{name:"n", val:sq, cls:"i"}, {name:"x", val:sq, cls:"j"}],
+        box:bx({arg:sq, in:true, work:true}),
+        note:`Усередині n тепер ${sq}. Стара n не зберігалась — при кожному виклику параметр створюється заново.`});
+      out.push(String(sq2));
+      frames.push({line:5, out:[...out], vars:[{name:"x", val:sq, cls:"j"}], box:bx({arg:sq, out:true, ret:sq2}), kind:"end",
+        note:`Повернулось ${sq2}. Ось чому return важливіший за print: тільки повернуте значення живе далі в програмі.`});
+    } else {
+      out.push(String(sq));
+      frames.push({line:1, out:[...out], vars:[{name:"n", val:n, cls:"i"}], box:bx({arg:n, in:true, work:true}),
+        note:`print(${n} * ${n}) намалював ${sq} на екрані. Але це саме малюнок — назовні нічого не віддано.`});
+      frames.push({line:3, out:[...out], vars:[{name:"x", val:"None", cls:"n"}], box:bx({arg:n, out:true, ret:"None"}),
+        note:`Функція дійшла до кінця без return. Python мовчки дописує return None — саме None і потрапило в x.`});
+      out.push(`Результат: None`);
+      frames.push({line:4, out:[...out], vars:[{name:"x", val:"None", cls:"n"}], box:bx({arg:n, out:true, ret:"None"}), kind:"end",
+        note:`Число ${sq} промайнуло на екрані й зникло безслідно. У змінній лежить None — «немає значення».`});
+    }
+    return {code, frames};
+  },
+  extra:(f)=>boxViz(f.box)
+});
+
+/* ================= 4. sep і end ================= */
+createPlayer(document.getElementById("func-w-kwargs"), {
+  config:`<span class="seg">
+      <button data-mode="sep" aria-pressed="true">sep</button>
+      <button data-mode="end" aria-pressed="false">end</button>
+    </span>`,
+  readCfg:(r)=>({ mode:modeCfg(r) }),
+  build:({mode})=>{
+    const tok = (t, cls) => ({t, cls});
+    const sp  = (t, nl)  => ({t, sep:true, nl:!!nl});
+    const frames = [];
+
+    if(mode === "sep"){
+      const code = [`print("коти", "собаки", "миші")`,
+                    `print("коти", "собаки", "миші", sep=", ")`,
+                    `print("коти", "собаки", "миші", sep="")`,
+                    `print("коти", "собаки", "миші", sep=" | ")`];
+      const words = ["коти", "собаки", "миші"];
+      const SEPS = [
+        {s:" ",   show:"␣",   txt:`Типове значення sep — пробіл. Його ніхто не писав, він стоїть за замовчуванням.`},
+        {s:", ",  show:",␣", txt:`sep=", " — між значеннями кома з пробілом. Зручно для переліків.`},
+        {s:"",    show:"∅",   txt:`sep="" — не вставляти нічого. Слова злипаються.`},
+        {s:" | ", show:"␣|␣", txt:`Роздільником може бути будь-який рядок, не тільки розділовий знак.`}
+      ];
+      const out = [];
+      frames.push({line:0, out:[], parts:words.map(w=>tok(w)),
+        note:`print може отримати кілька значень через кому. Питання лише в тому, чим він їх склеїть.`});
+      SEPS.forEach((cfg, k)=>{
+        const parts = [];
+        words.forEach((w, i)=>{ parts.push(tok(w, "now")); if(i < words.length-1) parts.push(sp(cfg.show)); });
+        out.push(words.join(cfg.s));
+        frames.push({line:k, out:[...out], parts, kind: k === SEPS.length-1 ? "end" : "",
+          note: cfg.txt});
+      });
+      return {code, frames};
+    }
+
+    const code = [`print("Привіт")`, `print("Світ")`, ``,
+                  `print("Привіт", end="")`, `print("Світ")`];
+    const out = [];
+    frames.push({line:0, out:[], parts:[tok("Привіт"), sp("⏎", true)],
+      note:`Типове значення end — символ переходу на новий рядок. Тому кожен print починає новий рядок.`});
+    out.push("Привіт");
+    frames.push({line:0, out:[...out], parts:[tok("Привіт", "now"), sp("⏎", true)],
+      note:`Надрукували «Привіт» і невидимо перейшли на новий рядок.`});
+    out.push("Світ");
+    frames.push({line:1, out:[...out], parts:[tok("Світ", "now"), sp("⏎", true)],
+      note:`Другий print почав із чистого рядка — саме через той невидимий перехід.`});
+    out.push("Привіт");
+    frames.push({line:3, out:[...out], parts:[tok("Привіт", "now"), sp("∅")],
+      note:`А тепер end="". Наприкінці не додається нічого, курсор лишається в тому самому рядку.`});
+    out[out.length-1] = "ПривітСвіт";
+    frames.push({line:4, out:[...out], parts:[tok("Привіт"), sp("∅"), tok("Світ", "now"), sp("⏎", true)], kind:"end",
+      note:`Тому наступний print дописався впритул: вийшло «ПривітСвіт» одним рядком.`});
+    return {code, frames};
+  },
+  legend:`<span><i class="p"></i>значення</span><span><i class="y"></i>що вставляє print</span>` +
+         `<span>␣ — пробіл, ∅ — порожньо, ⏎ — новий рядок</span>`,
+  extra:(f)=>`<div class="joinviz">` + (f.parts || []).map(x =>
+      x.sep ? `<span class="jsep${x.nl ? " nl" : ""}">${esc(x.t)}</span>`
+            : `<span class="jtok ${x.cls || ""}">${esc(x.t)}</span>`).join("") + `</div>`
+});
+
+/* ================= 5. стек викликів ================= */
+createPlayer(document.getElementById("func-w-stack"), {
+  build:()=>{
+    const code = [
+      `def a():`, `    print("a: почалась")`, `    b()`, `    print("a: завершилась")`, ``,
+      `def b():`, `    print("b: почалась")`, `    c()`, `    print("b: завершилась")`, ``,
+      `def c():`, `    print("c: почалась")`, `    print("c: завершилась")`, ``,
+      `a()`
+    ];
+    const base = {n:"головний код", ret:"—", base:true};
+    const out = [], frames = [];
+    const snap = (arr) => arr.map(x=>Object.assign({}, x));
+    let st = [base];
+
+    frames.push({line:14, out:[], stack:snap(st),
+      note:`Програма стартувала. На стеку лише головний код — з нього все й почнеться.`});
+
+    st = [base, {n:"a()", ret:"поверне в рядок 15"}];
+    frames.push({line:14, out:[], stack:snap(st),
+      note:`Виклик a(). Python кладе на стек новий кадр і записує в нього, куди повертатись — у рядок 15.`});
+    out.push("a: почалась");
+    frames.push({line:1, out:[...out], stack:snap(st), note:`Працює тіло a().`});
+
+    st = [base, {n:"a()", ret:"рядок 15"}, {n:"b()", ret:"поверне в рядок 3"}];
+    frames.push({line:2, out:[...out], stack:snap(st), kind:"inner",
+      note:`a() викликає b(). Кадр a() нікуди не подівся — він просто чекає під новим кадром.`});
+    out.push("b: почалась");
+    frames.push({line:6, out:[...out], stack:snap(st), kind:"inner", note:`Працює тіло b().`});
+
+    st = [base, {n:"a()", ret:"рядок 15"}, {n:"b()", ret:"рядок 3"}, {n:"c()", ret:"поверне в рядок 8"}];
+    frames.push({line:7, out:[...out], stack:snap(st), kind:"inner",
+      note:`b() викликає c(). Стос уже з трьох кадрів — це і є «глибина» виклику.`});
+    out.push("c: почалась");
+    frames.push({line:11, out:[...out], stack:snap(st), kind:"inner", note:`Працює тіло c().`});
+    out.push("c: завершилась");
+    frames.push({line:12, out:[...out], stack:snap(st.slice(0,3).concat([{n:"c()", ret:"зараз зникне", leaving:true}])), kind:"inner",
+      note:`Останній рядок c(). Далі її кадр знімається зі стека.`});
+
+    st = [base, {n:"a()", ret:"рядок 15"}, {n:"b()", ret:"рядок 3"}];
+    frames.push({line:7, out:[...out], stack:snap(st),
+      note:`c() завершилась, кадр знято. Виконання повернулось рівно туди, звідки її викликали — у рядок 8.`});
+    out.push("b: завершилась");
+    frames.push({line:8, out:[...out], stack:snap(st.slice(0,2).concat([{n:"b()", ret:"зараз зникне", leaving:true}])),
+      note:`b() дороблює свій останній рядок.`});
+
+    st = [base, {n:"a()", ret:"рядок 15"}];
+    frames.push({line:2, out:[...out], stack:snap(st),
+      note:`Кадр b() знято. Ми знову в a(), у рядку 3 — саме там, де її колись перервали.`});
+    out.push("a: завершилась");
+    frames.push({line:3, out:[...out], stack:snap(st.slice(0,1).concat([{n:"a()", ret:"зараз зникне", leaving:true}])),
+      note:`Останній рядок a().`});
+
+    frames.push({line:14, out:[...out], stack:[base], kind:"end",
+      note:`Стек порожній — лишився тільки головний код. Порядок виводу вийшов «сходинками»: спершу вглиб, потім назад.`});
+    return {code, frames};
+  },
+  legend:`<span><i class="p"></i>кадр, який виконується зараз</span>` +
+         `<span><i class="r"></i>кадр, що зараз зникне</span>` +
+         `<span>нові кадри лягають зверху</span>`,
+  extra:(f)=>{
+    const st = f.stack || [];
+    return `<div class="stack">` + st.map((s, k) =>
+      `<div class="frame${s.base ? " base" : ""}${s.leaving ? " leaving" : (k === st.length-1 && !s.base ? " top" : "")}">` +
+      `<span class="fnm">${esc(s.n)}</span><span class="ret">${esc(s.ret)}</span></div>`).join("") +
+      `</div><div class="stackhint">кадрів на стеку: ${st.length}</div>`;
+  }
+});
+
+/* ================= 6. локальна й глобальна області ================= */
+createPlayer(document.getElementById("func-w-scope"), {
+  config:`<span class="seg">
+      <button data-mode="local" aria-pressed="true">Локальна зникає</button>
+      <button data-mode="read" aria-pressed="false">Читання глобальної</button>
+      <button data-mode="same" aria-pressed="false">Однакові імена</button>
+    </span>`,
+  readCfg:(r)=>({ mode:modeCfg(r) }),
+  build:({mode})=>{
+    const G = (vars, extra) => Object.assign({t:"глобальна область", vars:vars}, extra || {});
+    const L = (t, vars, extra) => Object.assign({t:t, vars:vars, local:true}, extra || {});
+    const out = [], frames = [];
+
+    if(mode === "local"){
+      const code = [`def spam():`, `    eggs = "локальна"`, `    print(eggs)`, ``, `spam()`, `print(eggs)`];
+      frames.push({line:4, out:[], scopes:[G([])],
+        note:`Викликаємо spam(). Локальної області ще немає — вона народжується разом із викликом.`});
+      frames.push({line:1, out:[], vars:[{name:"eggs", val:'"локальна"', cls:"i"}],
+        scopes:[G([]), L("локальна область spam()", [{name:"eggs", val:'"локальна"', cls:"now"}])],
+        note:`Присвоєння всередині функції створило локальну змінну eggs. Вона живе тільки тут.`});
+      out.push("локальна");
+      frames.push({line:2, out:[...out], vars:[{name:"eggs", val:'"локальна"', cls:"i"}],
+        scopes:[G([]), L("локальна область spam()", [{name:"eggs", val:'"локальна"', cls:"hit"}])],
+        note:`Усередині функції змінна чудово читається.`});
+      frames.push({line:4, out:[...out],
+        scopes:[G([]), L("локальна область spam()", [{name:"eggs", val:"знищено", cls:"err"}], {gone:true})],
+        note:`Функція завершилась — уся її локальна область стерта. Змінної eggs більше не існує.`});
+      frames.push({line:5, out:[...out], kind:"end",
+        scopes:[G([], {empty:"тут eggs ніколи не було"})],
+        note:`NameError: name 'eggs' is not defined. Глобальний код ніколи не бачив цієї змінної.`});
+      return {code, frames};
+    }
+
+    if(mode === "read"){
+      const code = [`def spam():`, `    print(eggs)`, ``, `eggs = "глобальна"`, `spam()`];
+      frames.push({line:3, out:[], scopes:[G([{name:"eggs", val:'"глобальна"', cls:"now"}])],
+        note:`Змінна створена поза всіма функціями, тому вона глобальна.`});
+      frames.push({line:4, out:[], scopes:[G([{name:"eggs", val:'"глобальна"', cls:""}]),
+        L("локальна область spam()", [], {empty:"своїх змінних немає"})],
+        note:`Виклик spam(). Локальна область створена, але поки порожня.`});
+      out.push("глобальна");
+      frames.push({line:1, out:[...out], vars:[{name:"eggs", val:'"глобальна"', cls:"n"}],
+        scopes:[G([{name:"eggs", val:'"глобальна"', cls:"hit"}]),
+        L("локальна область spam()", [], {empty:"своїх змінних немає"})],
+        note:`Своєї eggs у функції немає — Python виходить назовні й знаходить глобальну. Читати глобальні змінні можна.`});
+      frames.push({line:4, out:[...out], kind:"end", scopes:[G([{name:"eggs", val:'"глобальна"', cls:""}])],
+        note:`Глобальна змінна лишилась незмінною: ми її лише прочитали.`});
+      return {code, frames};
+    }
+
+    const code = [`def spam():`, `    eggs = "spam local"`, `    print(eggs)`, ``,
+                  `def bacon():`, `    eggs = "bacon local"`, `    spam()`, `    print(eggs)`, ``,
+                  `eggs = "global"`, `bacon()`, `print(eggs)`];
+    const g = (cls) => G([{name:"eggs", val:'"global"', cls:cls || ""}]);
+    frames.push({line:9, out:[], scopes:[g("now")],
+      note:`Три різні змінні матимуть однакове ім'я eggs. Це не конфлікт — це три різні коробки в різних областях.`});
+    frames.push({line:5, out:[], vars:[{name:"eggs", val:'"bacon local"', cls:"i"}],
+      scopes:[g(), L("локальна область bacon()", [{name:"eggs", val:'"bacon local"', cls:"now"}])],
+      note:`bacon() створила свою власну eggs. Глобальної вона не торкнулась.`});
+    frames.push({line:1, out:[], vars:[{name:"eggs", val:'"spam local"', cls:"i"}],
+      scopes:[g(), L("локальна область spam()", [{name:"eggs", val:'"spam local"', cls:"now"}])],
+      note:`bacon() викликала spam(), і та створила ще одну свою eggs. Область bacon() зараз недосяжна — функції не бачать локальних змінних одна одної.`});
+    out.push("spam local");
+    frames.push({line:2, out:[...out], vars:[{name:"eggs", val:'"spam local"', cls:"i"}],
+      scopes:[g(), L("локальна область spam()", [{name:"eggs", val:'"spam local"', cls:"hit"}])],
+      note:`spam() друкує свою — «spam local».`});
+    out.push("bacon local");
+    frames.push({line:7, out:[...out], vars:[{name:"eggs", val:'"bacon local"', cls:"i"}],
+      scopes:[g(), L("локальна область bacon()", [{name:"eggs", val:'"bacon local"', cls:"hit"}])],
+      note:`spam() завершилась, її область стерта. bacon() бачить свою eggs у цілості — «bacon local».`});
+    out.push("global");
+    frames.push({line:11, out:[...out], kind:"end", scopes:[g("hit")],
+      note:`І глобальна eggs теж ціла: жодна функція її не чіпала. Три коробки, одне ім'я, жодного конфлікту.`});
+    return {code, frames};
+  },
+  extra:(f)=>scopeViz(f.scopes)
+});
+
+/* ================= 7. global і UnboundLocalError ================= */
+createPlayer(document.getElementById("func-w-global"), {
+  config:`<span class="seg">
+      <button data-mode="no" aria-pressed="true">Без global</button>
+      <button data-mode="yes" aria-pressed="false">Із global</button>
+      <button data-mode="err" aria-pressed="false">Помилка</button>
+    </span>`,
+  readCfg:(r)=>({ mode:modeCfg(r) }),
+  build:({mode})=>{
+    const G = (vars, extra) => Object.assign({t:"глобальна область", vars:vars}, extra || {});
+    const L = (vars, extra) => Object.assign({t:"локальна область change()", vars:vars, local:true}, extra || {});
+    const out = [], frames = [];
+
+    if(mode === "no"){
+      const code = [`def change():`, `    counter = 99`, ``, `counter = 1`, `change()`, `print(counter)`];
+      frames.push({line:3, out:[], scopes:[G([{name:"counter", val:"1", cls:"now"}])],
+        note:`Глобальна counter дорівнює 1.`});
+      frames.push({line:1, out:[], vars:[{name:"counter", val:99, cls:"i"}],
+        scopes:[G([{name:"counter", val:"1", cls:""}]), L([{name:"counter", val:"99", cls:"now"}])],
+        note:`Присвоєння у функції завжди створює локальну змінну — навіть якщо зовні вже є така сама за іменем. Тепер їх дві.`});
+      frames.push({line:4, out:[],
+        scopes:[G([{name:"counter", val:"1", cls:""}]), L([{name:"counter", val:"99", cls:"err"}], {gone:true})],
+        note:`Функція завершилась — локальна counter зникла разом із нею, так і не вплинувши ні на що.`});
+      out.push("1");
+      frames.push({line:5, out:[...out], kind:"end", scopes:[G([{name:"counter", val:"1", cls:"hit"}])],
+        note:`Друкується 1. Глобальна змінна лишилась недоторканою.`});
+      return {code, frames};
+    }
+
+    if(mode === "yes"){
+      const code = [`def change():`, `    global counter`, `    counter = 99`, ``,
+                    `counter = 1`, `change()`, `print(counter)`];
+      frames.push({line:4, out:[], scopes:[G([{name:"counter", val:"1", cls:"now"}])],
+        note:`Знову починаємо з глобальної counter = 1.`});
+      frames.push({line:1, out:[],
+        scopes:[G([{name:"counter", val:"1", cls:""}]), L([], {empty:"своїх змінних не буде"})],
+        note:`Рядок global counter каже: «у цій функції counter — це та сама зовнішня змінна, не створюй локальну».`});
+      frames.push({line:2, out:[], vars:[{name:"counter", val:99, cls:"n"}],
+        scopes:[G([{name:"counter", val:"99", cls:"now"}]), L([], {empty:"своїх змінних немає"})],
+        note:`Присвоєння пішло прямо в глобальну область. Локальної counter так і не з'явилось.`});
+      out.push("99");
+      frames.push({line:6, out:[...out], kind:"end", scopes:[G([{name:"counter", val:"99", cls:"hit"}])],
+        note:`Друкується 99 — функція справді змінила зовнішній світ. Саме тому global треба використовувати обережно.`});
+      return {code, frames};
+    }
+
+    const code = [`def change():`, `    print(counter)`, `    counter = 99`, ``, `counter = 1`, `change()`];
+    frames.push({line:4, out:[], scopes:[G([{name:"counter", val:"1", cls:"now"}])],
+      note:`Глобальна counter = 1. Здавалося б, функція нижче спокійно її прочитає.`});
+    frames.push({line:5, out:[],
+      scopes:[G([{name:"counter", val:"1", cls:""}]), L([{name:"counter", val:"ще порожня", cls:"empty"}])],
+      note:`Перед запуском тіла Python переглядає його цілком і бачить присвоєння в рядку 3. Отже, counter тут локальна — на всій довжині функції, з першого рядка.`});
+    frames.push({line:1, out:[], kind:"end",
+      scopes:[G([{name:"counter", val:"1", cls:""}]), L([{name:"counter", val:"ще порожня", cls:"err"}])],
+      note:`UnboundLocalError: local variable 'counter' referenced before assignment. Читаємо локальну змінну, в яку ще нічого не поклали. Порятунок — або рядок global counter, або інше ім'я.`});
+    return {code, frames};
+  },
+  extra:(f)=>scopeViz(f.scopes)
+});
+
+/* ================= 8. try / except ================= */
+createPlayer(document.getElementById("func-w-try"), {
+  config:`<label>дільник <input type="number" data-cfg id="func-tr-x" value="4" min="-6" max="12"></label>`,
+  readCfg:(r)=>({ x:numCfg(r, "#func-tr-x", 4) }),
+  build:({x})=>{
+    const code = [
+      `def divide(x):`,
+      `    try:`,
+      `        return 42 / x`,
+      `    except ZeroDivisionError:`,
+      `        print("Помилка: ділення на нуль")`,
+      ``,
+      `print(divide(${x}))`,
+      `print(divide(0))`,
+      `print("програма живе далі")`
+    ];
+    const out = [], frames = [];
+    const tv = (t, e) => ({try:t, exc:e});
+
+    /* один прохід функції; повертає рядки, які лягли у вивід */
+    function call(arg, line){
+      frames.push({line, out:[...out], vars:[{name:"x", val:arg, cls:"i"}], tv:tv("idle", "idle"),
+        note:`Виклик divide(${arg}).`});
+      frames.push({line:1, out:[...out], vars:[{name:"x", val:arg, cls:"i"}], tv:tv("run", "idle"),
+        note:`Заходимо в блок try. Python пробує виконати те, що всередині.`});
+      if(arg === 0){
+        frames.push({line:2, out:[...out], vars:[{name:"x", val:arg, cls:"i"}], tv:tv("boom", "idle"),
+          note:`42 / 0 — помилка ZeroDivisionError. Без try програма зараз би впала й нічого далі не виконалось би.`});
+        out.push("Помилка: ділення на нуль");
+        frames.push({line:4, out:[...out], vars:[{name:"x", val:arg, cls:"i"}], tv:tv("boom", "ok"),
+          note:`Але тип помилки збігся з except — керування перескочило сюди. Падіння не сталося.`});
+        out.push("None");
+        frames.push({line, out:[...out], vars:[], tv:tv("boom", "ok"),
+          note:`Блок except відпрацював, до return справа не дійшла — тому divide(0) повернула None.`});
+        return;
+      }
+      const res = Math.round((42 / arg) * 100) / 100;
+      frames.push({line:2, out:[...out], vars:[{name:"x", val:arg, cls:"i"}], tv:tv("ok", "idle"),
+        note:`42 / ${arg} = ${res}. Помилки не сталося, тож блок except просто пропускається.`});
+      out.push(String(res));
+      frames.push({line, out:[...out], vars:[], tv:tv("ok", "idle"),
+        note:`Функція повернула ${res} — звичайний нормальний результат.`});
+    }
+
+    frames.push({line:0, out:[], tv:tv("idle", "idle"),
+      note:`Функція описана: у try — те, що може впасти, у except — план Б.`});
+    call(x, 6);
+    call(0, 7);
+    out.push("програма живе далі");
+    frames.push({line:8, out:[...out], kind:"end", tv:tv("idle", "idle"),
+      note:`Найголовніше: після перехопленої помилки програма не зупинилась, а спокійно дійшла до останнього рядка.`});
+    return {code, frames};
+  },
+  legend:`<span><i class="y"></i>виконується</span><span><i class="g"></i>минуло без помилки</span>` +
+         `<span><i class="r"></i>тут сталася помилка</span>`,
+  extra:(f)=>{
+    const t = f.tv || {};
+    return `<div class="tryviz">` +
+      `<div class="tryblk ${t.try || "idle"}"><span class="tag">try</span><span>return 42 / x</span></div>` +
+      `<div class="tryblk ${t.exc || "idle"}"><span class="tag">except</span><span>ZeroDivisionError → повідомлення</span></div>` +
+      `</div>`;
+  }
+});
+
+/* ================= hero ================= */
+(function(){
+  const id  = (s) => document.getElementById(s);
+  const arg = id("func-heroArg"), ret = id("func-heroRet"), box = id("func-heroBox"),
+        w1  = id("func-heroW1"),  w2  = id("func-heroW2"),
+        line = id("func-heroLine"), btn = id("func-heroBtn");
+  const VALS = [4, 7, 9, 12];
+  let n = 0, timers = [];
+  const clear = () => { timers.forEach(clearTimeout); timers = []; };
+  const at = (ms, fn) => { timers.push(setTimeout(fn, ms)); };
+
+  function run(){
+    clear();
+    const v = VALS[n % VALS.length]; n++;
+    arg.textContent = "?"; arg.className = "fnpill arg";
+    ret.textContent = "?"; ret.className = "fnpill ret";
+    box.className = "fnbox"; w1.className = "fnwire"; w2.className = "fnwire";
+    line.textContent = "функція описана й чекає на виклик";
+
+    at(420,  ()=>{ arg.textContent = v; arg.className = "fnpill arg on";
+                   line.innerHTML = `виклик <b>square(${v})</b>`; });
+    at(1050, ()=>{ w1.className = "fnwire on";
+                   line.innerHTML = `аргумент <b>${v}</b> заходить у параметр <b>n</b>`; });
+    at(1700, ()=>{ box.className = "fnbox work";
+                   line.innerHTML = `усередині коробки: <b>n * n</b> — це ${v} × ${v}`; });
+    at(2450, ()=>{ box.className = "fnbox"; w2.className = "fnwire back"; });
+    at(2850, ()=>{ ret.textContent = v * v; ret.className = "fnpill ret on";
+                   line.innerHTML = `<b>square(${v})</b> повертає <b>${v * v}</b>`; });
+    at(4500, run);
+  }
+
+  /* кнопка програє той самий приклад ще раз, а не наступний */
+  btn.onclick = ()=>{ n = Math.max(0, n - 1); run(); };
+  window.registerAnim({
+    el: btn,
+    stop(){ clear(); },
+    start(){ clear(); at(600, run); }
   });
 })();
 

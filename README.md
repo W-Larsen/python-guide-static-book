@@ -1,1 +1,1 @@
-# python-guide-static-book
+# python-howto-ua
