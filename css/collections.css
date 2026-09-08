@@ -1,0 +1,152 @@
+/* ==========================================================================
+   4. Колекції: під-сторінки в меню + віджети списків / словників / множин
+   ========================================================================== */
+
+  /* ---------- під-сторінки в бічному меню ---------- */
+  .subnav{display:none; margin:2px 0 6px; padding:0 0 0 14px}
+  .subnav.open{display:block}
+  .nav-sub{display:flex; gap:9px; align-items:baseline; padding:7px 10px; border-radius:8px;
+    text-decoration:none; color:var(--body); border-left:2px solid var(--rule-soft);
+    transition:background .15s, color .15s, border-color .15s}
+  .nav-sub:hover{background:var(--panel-2); color:var(--ink)}
+  .nav-sub .num{font-family:var(--mono); font-size:.68rem; color:#aab3bf; flex:none}
+  .nav-sub .t{font-size:.88rem; line-height:1.3}
+  .nav-sub.active{background:var(--i-soft); color:var(--i); border-left-color:var(--i)}
+  .nav-sub.active .num{color:var(--i)}
+  .nav-sub.active .t{font-weight:600}
+  .nav-item.has-kids .t::after{content:"›"; display:inline-block; margin-left:7px; color:#b9c1cc;
+    transform:rotate(90deg); font-size:.9rem}
+  .subnav .toc{padding-left:20px; margin:0 0 4px}
+  .toc.open{display:block}
+  .nav-item.trail{background:var(--panel-2)}
+  .nav-item.trail .t{font-weight:600; color:var(--ink)}
+  .nav-item.trail .num{color:var(--i)}
+
+  /* ---------- перемикач на головній «Колекції» ---------- */
+  #coll-hero .seg{margin-bottom:16px}
+  #coll-heroBox, #coll-hero .hero-line{display:grid}
+  #coll-hero .hv{grid-area:1/1; align-self:center; visibility:hidden}
+  #coll-hero .hv.on{visibility:visible}
+
+  /* ---------- бейдж «Advanced» ---------- */
+  .badge{display:inline-block; vertical-align:middle; margin-left:10px; font-family:var(--sans);
+    font-size:.62rem; letter-spacing:.09em; text-transform:uppercase; font-weight:600;
+    color:#fff; background:var(--i); border-radius:999px; padding:3px 9px; position:relative; top:-3px}
+  .adv-intro{border:1px solid #cfc0f7; background:linear-gradient(180deg,#f7f4ff,#fff);
+    border-radius:12px; padding:16px 20px; margin:1.4em 0 1.8em; max-width:none}
+  .adv-intro p:last-child{margin-bottom:0}
+  .adv-intro h3{margin-top:0}
+
+  /* ---------- список: комірки з індексами ---------- */
+  .lst{display:flex; gap:7px; flex-wrap:wrap; align-items:flex-start; padding:2px 0}
+  .cellw{text-align:center; flex:none}
+  .cell{min-width:48px; height:44px; padding:0 8px; border:1.5px solid var(--rule); border-radius:9px;
+    background:#fff; display:grid; place-items:center; font-family:var(--mono); font-size:.82rem;
+    color:var(--body); transition:background .2s, border-color .2s, color .2s, transform .2s, opacity .2s}
+  .cell.now{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700;
+    transform:translateY(-4px)}
+  .cell.hit{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
+  .cell.pick{border-color:#8ecfc6; background:var(--j-soft); color:var(--j)}
+  .cell.drop{border-color:#eab5ae; background:#fdeeec; color:var(--stop); text-decoration:line-through}
+  .cell.dim{opacity:.32}
+  .cell.warn{border-color:var(--hl-bar); background:var(--hl); color:#5c4600; font-weight:700}
+  .cell.ghost{border-style:dashed; background:var(--panel); color:#b3bcc7}
+  .cell.fresh{animation:pop .3s ease}
+  .cellw .ix{font-family:var(--mono); font-size:.67rem; color:#9aa4b0; margin-top:4px}
+  .cellw.on .ix{color:var(--i); font-weight:700}
+  .vizrow{display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; flex-wrap:wrap}
+  .vizrow:last-child{margin-bottom:0}
+  .vizlab{font-family:var(--mono); font-size:.72rem; color:var(--muted); min-width:76px;
+    padding-top:13px; flex:none}
+  .vizlab.i{color:var(--i)} .vizlab.j{color:var(--j)}
+
+  /* ---------- конвеєр map / filter ---------- */
+  .conv{display:flex; flex-direction:column; gap:0}
+  .convrow{display:grid; grid-template-columns:66px 1fr 34px 1fr; align-items:center; gap:10px;
+    padding:6px 8px; border-radius:8px; transition:background .2s}
+  .convrow.on{background:var(--hl)}
+  .convrow.off{opacity:.4}
+  .convhead{font-size:.72rem; color:#8a95a2; font-family:var(--sans); font-weight:600}
+  .convcell{font-family:var(--mono); font-size:.82rem; padding:6px 10px; border:1.5px solid var(--rule);
+    border-radius:8px; background:#fff; color:var(--body); text-align:center}
+  .convcell.src{color:var(--i); border-color:#cfc0f7; background:var(--i-soft)}
+  .convcell.res{color:var(--j); border-color:#8ecfc6; background:var(--j-soft); font-weight:700}
+  .convcell.no{color:var(--stop); border-color:#eab5ae; background:#fdeeec; text-decoration:line-through}
+  .convcell.wait{color:#b3bcc7; border-style:dashed; background:var(--panel)}
+  .convf{font-family:var(--mono); font-size:.72rem; color:var(--muted); text-align:center}
+  .convtitle{font-family:var(--mono); font-size:.75rem; color:var(--muted); margin-bottom:8px}
+  .convtitle b{color:var(--i)}
+
+  /* ---------- стовпчики для сортування ---------- */
+  .bars{display:flex; align-items:flex-end; gap:9px; height:136px; padding:6px 0 0}
+  .barw{display:flex; flex-direction:column; align-items:center; gap:5px; flex:none;
+    justify-content:flex-end; height:100%}
+  .bar{width:42px; border-radius:7px 7px 0 0; border:1.5px solid var(--rule); background:var(--panel-2);
+    display:flex; align-items:flex-start; justify-content:center; padding-top:4px;
+    font-family:var(--mono); font-size:.7rem; color:var(--muted);
+    transition:height .32s ease, background .2s, border-color .2s, color .2s}
+  .bar.cmp{border-color:var(--hl-bar); background:var(--hl); color:#5c4600; font-weight:700}
+  .bar.done{border-color:#8ecfc6; background:var(--j-soft); color:var(--j); font-weight:700}
+  .bar.now{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700}
+  .barlab{font-family:var(--mono); font-size:.7rem; color:var(--muted); max-width:66px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+  /* ---------- акумулятор ---------- */
+  .accrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:11px}
+  .accrow:last-child{margin-bottom:0}
+  .accbox{font-family:var(--mono); font-size:1.02rem; font-weight:700; color:var(--j);
+    border:1.5px solid #8ecfc6; background:var(--j-soft); border-radius:9px; padding:8px 16px}
+  .accbox.stop{color:var(--stop); border-color:#eab5ae; background:#fdeeec}
+  .accbox.wait{color:#b3bcc7; border-color:var(--rule); background:var(--panel); font-weight:400}
+  .acclab{font-family:var(--mono); font-size:.74rem; color:var(--muted)}
+
+  /* ---------- порівняльна таблиця колекцій ---------- */
+  table.cmp{width:100%; border-collapse:collapse; font-size:.92rem; margin:1.3em 0; max-width:none}
+  table.cmp th{font-family:var(--sans); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em;
+    color:#8a95a2; text-align:left; padding:9px 10px; border-bottom:1px solid var(--rule); font-weight:600}
+  table.cmp td{border-top:1px solid var(--rule-soft); padding:11px 10px; vertical-align:top;
+    line-height:1.45}
+  table.cmp td:first-child{font-weight:600; color:var(--ink); width:23%}
+  table.cmp code{font-size:.78em}
+  table.cmp tr:hover td{background:var(--panel)}
+
+  /* ---------- картки під-сторінок усередині статті ---------- */
+  .subcards{display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:16px;
+    margin:1.6em 0 .6em; max-width:none}
+  .subcard{display:flex; flex-direction:column; gap:6px; text-decoration:none; color:inherit;
+    border:1px solid var(--rule); border-radius:13px; padding:16px 18px; background:var(--panel);
+    transition:border-color .2s, background .2s, transform .2s}
+  .subcard:hover{border-color:var(--i); background:var(--i-soft); transform:translateY(-3px)}
+  .subcard .sc-mark{font-family:var(--mono); font-size:.72rem; color:var(--i); font-weight:700}
+  .subcard .sc-t{font-family:var(--display); font-weight:700; font-size:1.1rem; color:var(--ink)}
+  .subcard .sc-d{font-size:.87rem; color:var(--muted); line-height:1.45}
+
+  /* ---------- пошук: список проти множини ---------- */
+  .hashslot{width:46px; height:44px; border-radius:9px; border:1.5px dashed var(--rule);
+    background:var(--panel); display:grid; place-items:center; font-family:var(--mono);
+    font-size:.74rem; color:#b3bcc7; flex:none;
+    transition:background .2s, border-color .2s, color .2s}
+  .hashslot.full{border-style:solid; background:#fff; color:var(--body)}
+  .hashslot.hit{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
+  .hashslot.aim{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700}
+  .steps{font-family:var(--mono); font-size:.75rem; color:var(--muted)}
+  .steps b{color:var(--i); font-size:.95rem}
+
+  /* ---------- дрібне ---------- */
+  .kvrow.drop{border-color:#eab5ae; background:#fdeeec}
+  .kvrow.drop .k,.kvrow.drop .v{text-decoration:line-through; opacity:.75}
+  .kvrow.fresh{animation:pop .3s ease}
+  .legend{display:flex; gap:15px; flex-wrap:wrap; font-size:.76rem; color:var(--muted);
+    padding:12px 16px 0}
+  .legend i{display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px;
+    vertical-align:-1px; border:1.5px solid var(--rule); background:#fff}
+  .legend i.g{background:var(--j-soft); border-color:#8ecfc6}
+  .legend i.p{background:var(--i-soft); border-color:var(--i)}
+  .legend i.r{background:#fdeeec; border-color:#eab5ae}
+  .legend i.y{background:var(--hl); border-color:var(--hl-bar)}
+
+  @media (max-width:620px){
+    .convrow{grid-template-columns:54px 1fr 26px 1fr; gap:6px}
+    .vizlab{min-width:62px}
+    table.cmp{font-size:.86rem}
+  }

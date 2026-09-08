@@ -1,0 +1,108 @@
+/* ==========================================================================
+   2. Додатки конкретних тем
+   ========================================================================== */
+
+  /* --- коробки-змінні (тема «Змінні») --- */
+  .boxes{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; padding:14px 4px 6px}
+  .boxwrap{position:relative; text-align:center; width:104px}
+  .box{position:relative; height:78px; border:2px solid var(--rule); border-radius:11px; background:#fff;
+    display:grid; place-items:center; overflow:hidden;
+    transition:border-color .18s, box-shadow .18s}
+  .box::before{content:""; position:absolute; top:0; left:0; right:0; height:12px;
+    background:var(--panel-2); border-bottom:1px solid var(--rule-soft)}
+  .box.empty{border-style:dashed; background:var(--panel)}
+  .box.active{border-color:var(--i); box-shadow:0 0 0 4px var(--i-soft)}
+  .box.reading{border-color:var(--j); box-shadow:0 0 0 4px var(--j-soft)}
+  .val{position:relative; z-index:1; font-family:var(--mono); font-size:.92rem; font-weight:700;
+    color:var(--ink); padding:0 6px; word-break:break-all}
+  .val.none{font-weight:400; font-size:.76rem; color:#b4bec9}
+  .box.changed .val{animation:dropin .42s cubic-bezier(.2,1.3,.5,1)}
+  @keyframes dropin{0%{transform:translateY(-34px); opacity:0}60%{opacity:1}100%{transform:translateY(0)}}
+  .ghost{position:absolute; z-index:0; font-family:var(--mono); font-size:.85rem; color:var(--stop);
+    text-decoration:line-through; animation:fallout .7s ease forwards}
+  @keyframes fallout{0%{transform:translateY(0); opacity:.9}100%{transform:translateY(46px); opacity:0}}
+  .copy{position:absolute; top:-6px; left:50%; z-index:3; font-family:var(--mono); font-size:.78rem;
+    color:var(--j); background:var(--j-soft); border:1px solid #8ecfc6; border-radius:7px;
+    padding:2px 9px; white-space:nowrap; animation:flyup .9s ease forwards}
+  @keyframes flyup{0%{opacity:0; transform:translate(-50%,16px)}35%{opacity:1}
+    100%{opacity:1; transform:translate(-50%,-24px)}}
+  .boxname{margin-top:9px; font-family:var(--mono); font-size:.82rem; font-weight:700; color:var(--i)}
+  .boxtype{font-family:var(--mono); font-size:.68rem; color:var(--muted); margin-top:1px}
+  .boxwrap.appear .box{animation:pop .3s ease}
+  .boxhint{font-size:.86rem; color:var(--muted); padding:0 4px 8px}
+
+  /* --- сходинки умов (тема «Умови») --- */
+  .ladder{display:flex; flex-direction:column; gap:7px; max-width:520px}
+  .br{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:.79rem;
+    padding:8px 12px; border:1.5px solid var(--rule); border-radius:9px; background:#fff;
+    color:var(--muted); transition:background .15s,border-color .15s,opacity .15s}
+  .br .verdict{margin-left:auto; font-weight:700; font-size:.75rem}
+  .br.check{border-color:var(--hl-bar); background:var(--hl); color:#5c4600}
+  .br.false{opacity:.5}
+  .br.false .verdict{color:var(--stop)}
+  .br.taken{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
+  .br.taken .verdict{color:var(--j)}
+  .br.skipped{opacity:.32; border-style:dashed}
+  .br.skipped .verdict{font-weight:400}
+
+  /* --- пісочниці --- */
+  .sandbox{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:18px 16px; background:#fff}
+  .sandbox input,.sandbox select{font-family:var(--mono); font-size:.9rem; padding:7px 9px;
+    border:1px solid var(--rule); border-radius:7px; background:#fff; color:var(--ink)}
+  #page-vars .sandbox input{width:190px}
+  #page-cond .sandbox input{width:78px}
+  .sandbox-note{padding:0 16px 16px; font-size:.92rem; color:var(--muted); background:#fff}
+  .verdict-ok{color:var(--j); font-weight:600}
+  .verdict-bad{color:var(--stop); font-weight:600}
+  .arrow{color:var(--muted)}
+  #page-cond .arrow{font-size:1.1rem}
+  .bool{font-family:var(--mono); font-weight:700; font-size:1rem; padding:7px 16px; border-radius:8px;
+    border:1.5px solid}
+  .bool.t{color:var(--j); background:var(--j-soft); border-color:#8ecfc6}
+  .bool.f{color:var(--stop); background:#fdeeec; border-color:#eab5ae}
+  .switchrow{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+  .switch{display:flex; align-items:center; gap:7px; font-size:.85rem; color:var(--muted); cursor:pointer}
+  .switch input{width:16px; height:16px; accent-color:var(--i)}
+  .w-config input[type=text]{font-family:var(--mono); font-size:.82rem; padding:4px 7px;
+    border:1px solid var(--rule); border-radius:6px; background:#fff; color:var(--ink); width:110px}
+
+  table.tt{border-collapse:collapse; font-family:var(--mono); font-size:.76rem; background:#fff}
+  table.tt th{font-weight:700; color:var(--muted); padding:6px 12px; border-bottom:1px solid var(--rule)}
+  table.tt td{padding:6px 12px; border-top:1px solid var(--rule-soft); text-align:center; color:var(--muted)}
+  table.tt tr.now td{background:var(--hl); color:#4a3800; font-weight:700}
+
+  /* --- словники й множини --- */
+  .kv{display:flex; flex-direction:column; gap:7px; max-width:460px}
+  .hero .kv{margin-bottom:16px}
+  .kvrow{display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:.82rem;
+    padding:7px 12px; border:1.5px solid var(--rule); border-radius:9px; background:#fff;
+    color:var(--muted); transition:border-color .18s, background .18s}
+  .kvrow .k{font-weight:700; color:var(--i)}
+  .kvrow .sep{color:#b3bcc7}
+  .kvrow .v{margin-left:auto; font-weight:700; color:var(--ink)}
+  .kvrow.now{border-color:var(--i); background:var(--i-soft)}
+  .kvrow.hit{border-color:var(--j); background:var(--j-soft)}
+  .kvrow.hit .v{color:var(--j)}
+  .kv-empty{font-family:var(--mono); font-size:.8rem; color:#b3bcc7}
+
+  .setrow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:8px}
+  .setrow:last-child{margin-bottom:0}
+  .setlabel{font-family:var(--mono); font-size:.72rem; color:var(--muted); width:52px; flex:none}
+  .selem{font-family:var(--mono); font-size:.82rem; padding:5px 12px; border:1.5px solid var(--rule);
+    border-radius:999px; background:#fff; color:var(--muted);
+    transition:background .15s, border-color .15s, opacity .15s}
+  .selem.done{opacity:.45}
+  .selem.in{border-color:#8ecfc6; background:var(--j-soft); color:var(--j); font-weight:700}
+  .selem.now{border-color:var(--i); background:var(--i-soft); color:var(--i); font-weight:700}
+  .selem.dup{border-color:#eab5ae; background:#fdeeec; color:var(--stop); text-decoration:line-through}
+
+  .hashgrid{display:flex; flex-wrap:wrap; gap:8px; padding:16px 16px 12px; background:#fff}
+  .hashgrid button{font-family:var(--mono); font-size:.82rem; padding:6px 12px; cursor:pointer;
+    border:1px solid var(--rule); border-radius:8px; background:#fff; color:var(--ink)}
+  .hashgrid button:hover{background:var(--panel-2)}
+  .hashgrid button[aria-pressed=true]{border-color:var(--i); background:var(--i-soft);
+    color:var(--i); font-weight:700}
+  .mono-line{font-family:var(--mono); font-size:.9rem; color:var(--ink)}
+  .mono-line b{color:var(--i)}
+
+  @media (max-width:520px){ pre.code{font-size:.74rem} }
