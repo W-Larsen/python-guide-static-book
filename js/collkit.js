@@ -235,7 +235,10 @@ function createPlayerWith(root, spec, cfg){
      Розмітка кадрів усе одно будується для lockHeight, тож зайвої роботи
      тут нема: той самий прохід збирає, у яких кадрах кожна деталь активна.
      «Активна» — це клас now, hit або active у розмітці кадру. */
+  /* className в SVG — це об'єкт, а не рядок, тому клас читаємо атрибутом:
+     інакше деталі схем ніколи не потрапляли б в індекс */
   const ACTIVE = /(^|\s)(now|hit|active)(\s|$)/;
+  const clsOf = (el) => (el && el.getAttribute && el.getAttribute("class")) || "";
   function buildIndex(){
     keyIdx = Object.create(null); lineIdx = Object.create(null);
     const box = document.createElement("div");
@@ -246,7 +249,7 @@ function createPlayerWith(root, spec, cfg){
       if(!spec.extra) return;
       box.innerHTML = spec.extra(f);
       box.querySelectorAll("[data-key]").forEach(el=>{
-        if(!ACTIVE.test(el.className) && !ACTIVE.test(el.firstElementChild ? el.firstElementChild.className : "")) return;
+        if(!ACTIVE.test(clsOf(el)) && !ACTIVE.test(clsOf(el.firstElementChild))) return;
         const key = el.dataset.key, list = keyIdx[key] = keyIdx[key] || [];
         if(list[list.length-1] !== k) list.push(k);
       });

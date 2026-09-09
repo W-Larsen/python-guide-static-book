@@ -31,19 +31,66 @@
   .boxwrap.appear .box{animation:pop .3s ease}
   .boxhint{font-size:.86rem; color:var(--muted); padding:0 4px 8px}
 
-  /* --- сходинки умов (тема «Умови») --- */
-  .ladder{display:flex; flex-direction:column; gap:7px; max-width:520px}
-  .br{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:.79rem;
-    padding:8px 12px; border:1.5px solid var(--rule); border-radius:9px; background:var(--card);
-    color:var(--muted); transition:background .15s,border-color .15s,opacity .15s}
-  .br .verdict{margin-left:auto; font-weight:700; font-size:.75rem}
-  .br.check{border-color:var(--hl-bar); background:var(--hl); color:#5a4406}
-  .br.false{opacity:.5}
-  .br.false .verdict{color:var(--stop)}
-  .br.taken{border-color:var(--j); background:var(--j-soft); color:var(--j); font-weight:700}
-  .br.taken .verdict{color:var(--j)}
-  .br.skipped{opacity:.32; border-style:dashed}
-  .br.skipped .verdict{font-weight:400}
+  /* --- блок-схеми умов (тема «Умови») ---
+     Схема живе в системі координат viewBox і тягнеться на всю ширину блоку,
+     тому розміри нижче задані в одиницях SVG, а не в пікселях. */
+  .flowbox{display:flex; justify-content:center}
+  svg.flow{display:block; width:100%; height:auto; font-family:var(--mono)}
+
+  .fn-shape{fill:var(--card); stroke:var(--rule); stroke-width:1.6;
+    transition:fill var(--t-base) var(--ease), stroke var(--t-base) var(--ease)}
+  .fn-t{font-size:11.5px; text-anchor:middle; fill:var(--muted);
+    transition:fill var(--t-base) var(--ease)}
+  .fn{transition:opacity var(--t-base) var(--ease)}
+  .fn-cond .fn-t{font-size:12px}
+  .fn-start .fn-shape,.fn-end .fn-shape{fill:var(--panel-2)}
+
+  /* перевіряємо зараз */
+  .fn.is-check .fn-shape{fill:var(--hl); stroke:var(--hl-bar); stroke-width:2.2;
+    animation:fnpulse 1.3s var(--ease) infinite}
+  .fn.is-check .fn-t{fill:#5a4406; font-weight:700}
+  @keyframes fnpulse{0%,100%{stroke-width:2.2} 50%{stroke-width:3.6}}
+  /* дорога, якою програма справді пішла */
+  .fn.is-taken .fn-shape{fill:var(--j-soft); stroke:var(--j); stroke-width:2.2}
+  .fn.is-taken .fn-t{fill:var(--j); font-weight:700}
+  /* умову зважили, і вона виявилась хибною: двері зачинені, але їх відчиняли */
+  .fn.is-false{opacity:.72}
+  .fn.is-false .fn-t{fill:var(--stop)}
+  /* до цих гілок Python навіть не дійшов */
+  .fn.is-skipped{opacity:.3}
+  .fn.is-skipped .fn-shape{stroke-dasharray:5 4}
+
+  .fe-line{fill:none; stroke:var(--rule); stroke-width:1.8; stroke-linecap:round;
+    transition:stroke var(--t-base) var(--ease)}
+  .fe-head{fill:var(--rule); transition:fill var(--t-base) var(--ease)}
+  /* обведення кольором картки вирізає підпис із-під лінії */
+  .fe-lab{font-size:10.5px; fill:var(--muted); paint-order:stroke;
+    stroke:var(--card); stroke-width:4px; stroke-linejoin:round}
+  .fe{transition:opacity var(--t-base) var(--ease)}
+  .fe.is-on .fe-line{stroke:var(--j); stroke-width:2.6; animation:fedraw .45s var(--ease)}
+  .fe.is-on .fe-head{fill:var(--j); animation:fehead .5s var(--ease)}
+  .fe.is-on .fe-lab{fill:var(--j); font-weight:700}
+  .fe.is-off{opacity:.3}
+  .fe.is-off .fe-line{stroke-dasharray:5 5}
+  /* pathLength=100 у розмітці робить довжину всіх стрілок однаковою,
+     тому одна й та сама анімація «домальовує» будь-яку з них */
+  @keyframes fedraw{from{stroke-dasharray:0 100} to{stroke-dasharray:100 0}}
+  @keyframes fehead{0%,55%{opacity:0} 100%{opacity:1}}
+
+  /* На телефоні схема, стиснута до ширини екрана, стає нечитабельною —
+     краще лишити їй робочу ширину й дати прокрутку всередині блоку. */
+  @media (max-width:560px){
+    .flowbox{justify-content:flex-start; overflow-x:auto; scrollbar-gutter:stable}
+    .flowbox svg.flow{width:560px; flex:none}
+  }
+
+  /* --- умовні позначення схеми --- */
+  .flow-legend{display:grid; gap:13px; padding:16px 18px; border:1px solid var(--rule);
+    border-radius:11px; background:var(--panel)}
+  .fl-item{display:flex; align-items:center; gap:16px; font-size:.94rem; line-height:1.5}
+  /* одиниця viewBox = піксель, тому підписи всередині фігур не дрібнішають */
+  svg.flow.fl-ico{width:130px; height:46px; flex:none}
+  @media (max-width:520px){ .fl-item{flex-direction:column; align-items:flex-start; gap:8px} }
 
   /* --- пісочниці --- */
   .sandbox{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:18px 16px; background:var(--card)}
