@@ -84,6 +84,12 @@
     .flowbox svg.flow{width:560px; flex:none}
   }
 
+  /* Сітка й схема в одному блоці (тема «Цикли»): сітка вузька, тому схемі
+     віддано всю решту ширини — інакше підписи в фігурах стають дрібними. */
+  .vizsplit{display:flex; align-items:flex-start; gap:20px}
+  .vizsplit > .flowbox{flex:1; min-width:0}
+  @media (max-width:680px){ .vizsplit{flex-direction:column; gap:14px} }
+
   /* --- умовні позначення схеми --- */
   .flow-legend{display:grid; gap:13px; padding:16px 18px; border:1px solid var(--rule);
     border-radius:11px; background:var(--panel)}
