@@ -1,6 +1,5 @@
 "use strict";
 window.PageInit["cond"] = function(){
-const R = (n) => Array.from({length:n}, (_,k)=>k);
 const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
 /* дуже проста підсвітка синтаксису */
@@ -17,17 +16,247 @@ function hl(line){
 const createPlayer = window.CollKit.makePlayer({ hl, tick:620 });
 const { numCfg, modeCfg } = window.CollKit;
 
-/* ================= гілки ================= */
-function ladder(branches){
-  if(!branches) return "";
-  return `<div class="ladder">${branches.map(b=>{
-    const verdict = b.state==="false" ? "False"
-      : b.state==="taken" ? (b.label==="else" ? "виконується" : "True")
-      : b.state==="check" ? "перевіряємо…"
-      : b.state==="skipped" ? "не перевіряється" : "";
-    return `<div class="br ${b.state}"><span>${esc(b.label)}</span><span class="verdict">${verdict}</span></div>`;
-  }).join("")}</div>`;
+/* ==========================================================================
+   Блок-схеми
+
+   Схема — це той самий кадр програвача, тільки намальований як карта доріг:
+   ромб-умова, прямокутник-дія, стрілки з підписами True / False. Стани
+   беруться з тих самих гілок, що й раніше показував список перевірок, тож
+   схема просто ще один погляд на кадр, а не окрема логіка.
+
+   Координати нижче — не пікселі, а одиниці viewBox: SVG тягнеться на всю
+   ширину блоку, тому пропорції лишаються, а розмір підлаштовується.
+   ========================================================================== */
+const FW = 680;                       /* ширина системи координат */
+const rd = (v) => Math.round(v * 10) / 10;
+
+const A = {
+  t:(n)=>[n.x, n.y - n.h/2], b:(n)=>[n.x, n.y + n.h/2],
+  l:(n)=>[n.x - n.w/2, n.y], r:(n)=>[n.x + n.w/2, n.y]
+};
+
+/* ширина символу моношрифту й базова висота — за ними ділиться довгий підпис */
+const CHW  = { cond:7.3, act:7.0, start:7.0, end:7.0 };
+const BASH = { cond:50,  act:40,  start:34,  end:34  };
+
+function wrapLabel(text, maxCh){
+  const lines = [];
+  String(text).split(" ").forEach(w=>{
+    const cur = lines.length ? lines[lines.length-1] : null;
+    if(cur === null || (cur + " " + w).length > maxCh) lines.push(w);
+    else lines[lines.length-1] = cur + " " + w;
+  });
+  return lines.length ? lines : [""];
 }
+
+/* Ромб звужується догори й донизу, тому підпису в ньому потрібен більший
+   запас по краях, ніж прямокутнику. */
+function fnode(o){
+  const kind = o.kind || "act";
+  const lines = wrapLabel(o.label, Math.max(6, Math.floor((o.w - (kind==="cond"?66:28)) / CHW[kind])));
+  return { kind, x:o.x, y:o.y, w:o.w, lines,
+           h: BASH[kind] + (lines.length - 1) * 15,
+           state: o.state || "pending", key:o.key, title: o.title || o.label };
+}
+
+function nodeSvg(n){
+  const hw = n.w/2, hh = n.h/2;
+  const shape = n.kind === "cond"
+    ? `<path class="fn-shape" d="M${n.x} ${rd(n.y-hh)}L${rd(n.x+hw)} ${n.y}L${n.x} ${rd(n.y+hh)}L${rd(n.x-hw)} ${n.y}Z"/>`
+    : `<rect class="fn-shape" x="${rd(n.x-hw)}" y="${rd(n.y-hh)}" width="${n.w}" height="${n.h}" rx="${n.kind==="act"?10:hh}"/>`;
+  const y0 = n.y - (n.lines.length - 1) * 7.5 + 4.2;
+  const txt = n.lines.map((t,k)=>`<text class="fn-t" x="${n.x}" y="${rd(y0 + k*15)}">${esc(t)}</text>`).join("");
+  /* active — умовний знак «деталь зараз важлива»: за ним програвач робить
+     вузол клікабельним і вміє перемотати саме до цього кадру */
+  const live = n.state === "check" || n.state === "taken";
+  return `<g class="fn fn-${n.kind} is-${n.state}${live?" active":""}"` +
+         (n.key ? ` data-key="${esc(n.key)}"` : "") + `>` +
+         `<title>${esc(n.title)}</title>${shape}${txt}</g>`;
+}
+
+/* Ламана зі скругленими кутами: радіус сам зменшується, якщо коліно коротке. */
+function rpath(pts, r){
+  let d = `M${rd(pts[0][0])} ${rd(pts[0][1])}`;
+  for(let k = 1; k < pts.length - 1; k++){
+    const [px,py] = pts[k-1], [cx,cy] = pts[k], [nx,ny] = pts[k+1];
+    const d1 = Math.hypot(cx-px, cy-py) || 1, d2 = Math.hypot(nx-cx, ny-cy) || 1;
+    const rr = Math.min(r, d1/2, d2/2);
+    d += `L${rd(cx + (px-cx)/d1*rr)} ${rd(cy + (py-cy)/d1*rr)}` +
+         `Q${rd(cx)} ${rd(cy)} ${rd(cx + (nx-cx)/d2*rr)} ${rd(cy + (ny-cy)/d2*rr)}`;
+  }
+  const last = pts[pts.length-1];
+  return d + `L${rd(last[0])} ${rd(last[1])}`;
+}
+
+function headSvg(pts){
+  const [x2,y2] = pts[pts.length-1], [x1,y1] = pts[pts.length-2];
+  const a = Math.atan2(y2-y1, x2-x1), s = 7.5;
+  const p = (d) => `${rd(x2 - s*Math.cos(a+d))},${rd(y2 - s*Math.sin(a+d))}`;
+  return `<polygon class="fe-head" points="${rd(x2)},${rd(y2)} ${p(-0.42)} ${p(0.42)}"/>`;
+}
+
+function edgeSvg(e){
+  const lab = e.label
+    ? `<text class="fe-lab" x="${rd(e.lx)}" y="${rd(e.ly)}" text-anchor="${e.la || "middle"}">${esc(e.label)}</text>`
+    : "";
+  return `<g class="fe is-${e.state || "idle"}">` +
+         `<path class="fe-line" pathLength="100" d="${rpath(e.pts, 13)}"/>` +
+         headSvg(e.pts) + lab + `</g>`;
+}
+
+/* Пройдена стрілка малюється поверх решти — інакше спільний стовбур збоку
+   перекривав би саме ту дорогу, якою програма пішла. */
+const EORD = { off:0, idle:1, on:2 };
+function flowSvg(nodes, edges, h, label){
+  const es = edges.slice().sort((a,b)=>(EORD[a.state]||0) - (EORD[b.state]||0));
+  return `<svg class="flow" viewBox="0 0 ${FW} ${rd(h)}" role="img" aria-label="${esc(label)}">` +
+         es.map(edgeSvg).join("") + nodes.map(nodeSvg).join("") + `</svg>`;
+}
+
+/* стан гілки → стан стрілки, що з неї виходить */
+const eState = (st, want) => st === want ? "on"
+  : (st === "pending" || st === "check") ? "idle" : "off";
+/* стан гілки → стан прямокутника з її дією */
+const aState = (st) => st === "taken" ? "taken"
+  : (st === "false" || st === "skipped") ? "skipped" : "pending";
+const condText = (label) => String(label).trim().replace(/^(if|elif)\s+/, "") + " ?";
+
+/* ---------- ланцюжок if / elif / else ----------
+   Ромби стоять стовпчиком ліворуч, дії — праворуч. False веде вниз до
+   наступної перевірки, True — убік до дії. Усі дії зливаються в спільний
+   стовбур справа, який приводить до спільного продовження.
+   opts.tail — рядок без відступу після всього ланцюжка: він стоїть уже на
+   спільній дорозі, тому до нього приходять геть усі гілки. */
+function chainFlow(brs, opts){
+  opts = opts || {};
+  const SX = 120, CW = 215, AX = 448, AW = 310, JX = 642, Y0 = 100, PITCH = 90;
+  const conds = brs.filter(b=>!b.isElse);
+  const els   = brs.filter(b=>b.isElse)[0] || null;
+  const done  = opts.endState === "taken";
+
+  const start = fnode({kind:"start", x:SX, y:22, w:190, label:opts.start || "старт"});
+  const cn = conds.map((b,k)=>fnode({kind:"cond", x:SX, y:Y0 + k*PITCH, w:CW,
+    label:condText(b.label), state:b.state, key:"c"+k, title:b.label}));
+  const an = conds.map((b,k)=>fnode({kind:"act", x:AX, y:Y0 + k*PITCH, w:AW,
+    label:b.act, state:aState(b.state), key:"a"+k}));
+  const elseY = Y0 + conds.length * PITCH;
+  const en = els ? fnode({kind:"act", x:AX, y:elseY, w:AW, label:els.act,
+    state:aState(els.state), key:"ae"}) : null;
+
+  /* точка, де всі дороги знову сходяться */
+  const meetY = (en ? elseY : Y0 + (conds.length-1)*PITCH) + 86;
+  const tail = opts.tail
+    ? fnode({kind:"act", x:SX, y:meetY, w:230, label:opts.tail,
+             state:done ? "taken" : "pending", key:"tail"})
+    : null;
+  const meet = tail || fnode({kind:"end", x:SX, y:meetY, w:190,
+    label:opts.end || "кінець", state:done ? "taken" : "pending"});
+  const end = tail
+    ? fnode({kind:"end", x:SX, y:meetY + 68, w:190, label:opts.end || "кінець",
+             state:done ? "taken" : "pending"})
+    : null;
+
+  const edges = [{pts:[A.b(start), A.t(cn[0])], state:"on"}];
+  cn.forEach((c,k)=>{
+    edges.push({pts:[A.r(c), A.l(an[k])], state:eState(conds[k].state, "taken"),
+      label:"True", lx:(c.x + c.w/2 + an[k].x - an[k].w/2) / 2, ly:c.y - 8});
+    if(k < cn.length - 1)
+      edges.push({pts:[A.b(c), A.t(cn[k+1])], state:eState(conds[k].state, "false"),
+        label:"False", la:"start", lx:SX + 11, ly:c.y + c.h/2 + 19});
+  });
+  const lastC = cn[cn.length-1], lastS = conds[conds.length-1].state;
+  edges.push(en
+    ? {pts:[A.b(lastC), [SX, elseY], A.l(en)], state:eState(lastS, "false"),
+       label:"False", la:"start", lx:SX + 11, ly:lastC.y + lastC.h/2 + 19}
+    : {pts:[A.b(lastC), A.t(meet)], state:eState(lastS, "false"),
+       label:"False", la:"start", lx:SX + 11, ly:lastC.y + lastC.h/2 + 19});
+
+  const join = (n, st) => ({pts:[A.r(n), [JX, n.y], [JX, meetY], A.r(meet)], state:st});
+  an.forEach((a,k)=>edges.push(join(a, eState(conds[k].state, "taken"))));
+  if(en) edges.push(join(en, eState(els.state, "taken")));
+  if(end) edges.push({pts:[A.b(tail), A.t(end)], state:done ? "on" : "idle"});
+
+  const last = end || meet;
+  const nodes = [start].concat(cn, an, en ? [en] : [], [meet], end ? [end] : []);
+  return flowSvg(nodes, edges, last.y + last.h/2 + 16, "Блок-схема ланцюжка умов");
+}
+
+/* ---------- кілька незалежних if ----------
+   Кожна перевірка — окрема розвилка: обидві дороги повертаються на спільну
+   вертикаль, і програма йде до наступного if у будь-якому разі. */
+function seqFlow(brs, opts){
+  opts = opts || {};
+  const SX = 120, CW = 215, AX = 448, AW = 310, Y0 = 100, PITCH = 118;
+
+  const start = fnode({kind:"start", x:SX, y:22, w:190, label:opts.start || "старт"});
+  const cn = brs.map((b,k)=>fnode({kind:"cond", x:SX, y:Y0 + k*PITCH, w:CW,
+    label:condText(b.label), state:b.state, key:"c"+k, title:b.label}));
+  const an = brs.map((b,k)=>fnode({kind:"act", x:AX, y:Y0 + k*PITCH, w:AW,
+    label:b.act, state:aState(b.state), key:"a"+k}));
+  const end = fnode({kind:"end", x:SX, y:Y0 + (brs.length-1)*PITCH + 96, w:190,
+    label:opts.end || "кінець", state:opts.endState || "pending"});
+
+  const edges = [{pts:[A.b(start), A.t(cn[0])], state:"on"}];
+  cn.forEach((c,k)=>{
+    /* поворот повернення стоїть нижче за підпис False, інакше вони злипаються */
+    const st = brs[k].state, next = cn[k+1] || end, jy = c.y + c.h/2 + 44;
+    edges.push({pts:[A.r(c), A.l(an[k])], state:eState(st, "taken"),
+      label:"True", lx:(c.x + c.w/2 + an[k].x - an[k].w/2) / 2, ly:c.y - 8});
+    edges.push({pts:[A.b(c), A.t(next)], state:eState(st, "false"),
+      label:"False", la:"start", lx:SX + 11, ly:c.y + c.h/2 + 19});
+    edges.push({pts:[A.b(an[k]), [an[k].x, jy], [SX + 7, jy]], state:eState(st, "taken")});
+  });
+
+  return flowSvg([start].concat(cn, an, [end]), edges, end.y + end.h/2 + 16,
+    "Блок-схема трьох незалежних умов");
+}
+
+/* ---------- вкладені умови ----------
+   brs: [зовнішній if, внутрішній if, внутрішній else, зовнішній else] */
+function nestedFlow(brs, opts){
+  opts = opts || {};
+  const SX = 150, CW = 215, AX = 480, AW = 290, JX = 650;
+  const OY = 100, IY = 190, TY = 272, EY = 356;
+
+  const start = fnode({kind:"start", x:SX, y:22, w:190, label:opts.start || "старт"});
+  const oc = fnode({kind:"cond", x:SX, y:OY, w:CW, label:condText(brs[0].label),
+    state:brs[0].state, key:"co", title:brs[0].label});
+  const ob = fnode({kind:"act", x:AX, y:OY, w:AW, label:brs[3].act, state:aState(brs[3].state), key:"ao"});
+  const ic = fnode({kind:"cond", x:SX, y:IY, w:CW, label:condText(brs[1].label),
+    state:brs[1].state, key:"ci", title:brs[1].label});
+  const ib = fnode({kind:"act", x:AX, y:IY, w:AW, label:brs[2].act, state:aState(brs[2].state), key:"ai"});
+  const tb = fnode({kind:"act", x:SX, y:TY, w:270, label:brs[1].act, state:aState(brs[1].state), key:"at"});
+  const end = fnode({kind:"end", x:SX, y:EY, w:190, label:opts.end || "кінець",
+    state:opts.endState || "pending"});
+
+  const edges = [
+    {pts:[A.b(start), A.t(oc)], state:"on"},
+    {pts:[A.r(oc), A.l(ob)], state:eState(brs[0].state, "false"),
+      label:"False", lx:(oc.x + oc.w/2 + ob.x - ob.w/2)/2, ly:OY - 8},
+    {pts:[A.b(oc), A.t(ic)], state:eState(brs[0].state, "taken"),
+      label:"True", la:"start", lx:SX + 11, ly:(oc.y + oc.h/2 + ic.y - ic.h/2)/2 + 4},
+    {pts:[A.r(ic), A.l(ib)], state:eState(brs[1].state, "false"),
+      label:"False", lx:(ic.x + ic.w/2 + ib.x - ib.w/2)/2, ly:IY - 8},
+    {pts:[A.b(ic), A.t(tb)], state:eState(brs[1].state, "taken"),
+      label:"True", la:"start", lx:SX + 11, ly:(ic.y + ic.h/2 + tb.y - tb.h/2)/2 + 4},
+    {pts:[A.b(tb), A.t(end)], state:eState(brs[1].state, "taken")},
+    {pts:[A.r(ob), [JX, OY], [JX, EY], A.r(end)], state:eState(brs[3].state, "taken")},
+    {pts:[A.r(ib), [JX, IY], [JX, EY], A.r(end)], state:eState(brs[2].state, "taken")}
+  ];
+
+  return flowSvg([start, oc, ob, ic, ib, tb, end], edges, end.y + end.h/2 + 16,
+    "Блок-схема вкладених умов");
+}
+
+/* Схема під кодом. Овал старту повторює значення змінних, щоб схему можна
+   було читати окремо від коду, а кінець засвічується лише на останньому кадрі. */
+const flowOf = (draw, opts) => (f) => {
+  const o = Object.assign({
+    start: (f.vars || []).map(v=>`${v.name} = ${v.val}`).join(", ") || "старт",
+    endState: f.kind === "end" ? "taken" : "pending"
+  }, opts);
+  return `<div class="flowbox">${draw(f.branches, o)}</div>`;
+};
 
 /* ланцюжок if / elif / else */
 function chain({code, setupLine, vars, branches, elseBr, tail}){
@@ -35,8 +264,8 @@ function chain({code, setupLine, vars, branches, elseBr, tail}){
   const states = branches.map(()=> "pending");
   let elseState = elseBr ? "pending" : null;
   const snap = () => {
-    const arr = branches.map((b,k)=>({label:b.label, state:states[k]}));
-    if(elseBr) arr.push({label:"else", state:elseState});
+    const arr = branches.map((b,k)=>({label:b.label, act:`print("${b.msg}")`, state:states[k]}));
+    if(elseBr) arr.push({label:"else", act:`print("${elseBr.msg}")`, state:elseState, isElse:true});
     return arr;
   };
   frames.push({line:setupLine, vars, out:[], branches:snap(),
@@ -123,7 +352,7 @@ createPlayer(document.getElementById("cond-w-if"), {
     branches:[{line:1, body:2, label:"if temp > 20", expl:`${t} > 20`, cond:t>20, msg:"Тепло, беремо футболку"}],
     tail:{line:4, msg:"Гарного дня!"}
   }),
-  extra:(f)=>ladder(f.branches)
+  extra:flowOf(chainFlow, {tail:`print("Гарного дня!")`})
 });
 
 /* ================= 3. if / else ================= */
@@ -137,7 +366,7 @@ createPlayer(document.getElementById("cond-w-ifelse"), {
     branches:[{line:1, body:2, label:"if age >= 18", expl:`${a} >= 18`, cond:a>=18, msg:"Можна голосувати"}],
     elseBr:{line:3, body:4, msg:"Ще зарано"}
   }),
-  extra:(f)=>ladder(f.branches)
+  extra:flowOf(chainFlow)
 });
 
 /* ================= 4. ланцюжок elif ================= */
@@ -159,7 +388,7 @@ createPlayer(document.getElementById("cond-w-elif"), {
     ],
     elseBr:{line:7, body:8, msg:"Треба підтягнути"}
   }),
-  extra:(f)=>ladder(f.branches)
+  extra:flowOf(chainFlow)
 });
 
 /* ================= 5. elif проти кількох if ================= */
@@ -193,26 +422,28 @@ createPlayer(document.getElementById("cond-w-vs"), {
       `if score >= 75:`,`    print("Добре")`,`if score >= 60:`,`    print("Задовільно")`];
     const out=[], frames=[];
     const states=["pending","pending","pending"];
-    const snap=()=>defs.map((d,k)=>({label:"if "+d.label, state:states[k]}));
+    const snap=()=>defs.map((d,k)=>({label:"if "+d.label, act:`print("${d.msg}")`, state:states[k]}));
     const vars=[{name:"score",val:s,cls:"i"}];
-    frames.push({line:0, vars, out:[], branches:snap(), note:`Три незалежні умови. Кожна буде перевірена окремо.`});
+    frames.push({line:0, vars, out:[], branches:snap(), seq:true, note:`Три незалежні умови. Кожна буде перевірена окремо.`});
     defs.forEach((d,k)=>{
       states[k]="check";
-      frames.push({line:1+k*2, vars, out:[...out], branches:snap(),
+      frames.push({line:1+k*2, vars, out:[...out], branches:snap(), seq:true,
         note:`Перевірка №${k+1}: ${s} >= ${[90,75,60][k]} → ${d.cond?"True":"False"}. Попередній if на це ніяк не впливає.`});
       if(d.cond){
         states[k]="taken"; out.push(d.msg);
-        frames.push({line:2+k*2, vars, out:[...out], branches:snap(), kind:"inner",
+        frames.push({line:2+k*2, vars, out:[...out], branches:snap(), seq:true, kind:"inner",
           note:`Друкуємо «${d.msg}». Але програма піде перевіряти наступний if далі.`});
       } else states[k]="false";
     });
-    frames.push({line:0, vars, out:[...out], branches:snap(), kind:"end",
+    frames.push({line:0, vars, out:[...out], branches:snap(), seq:true, kind:"end",
       note: out.length>1
         ? `Ось і проблема: надруковано ${out.length} рядки замість одного. Оцінка має бути одна.`
         : `Тут результат збігся з ланцюжком, але лише випадково — спробуй бал 95.`});
     return {code, frames};
   },
-  extra:(f)=>ladder(f.branches)
+  /* дві схеми поруч показують те, чого не видно в коді: одна розвилка з
+     кількома виходами проти трьох розвилок поспіль */
+  extra:(f)=>flowOf(f.seq ? seqFlow : chainFlow)(f)
 });
 
 /* ================= 6. and / or / not ================= */
@@ -288,10 +519,10 @@ createPlayer(document.getElementById("cond-w-nested"), {
     const outer = a>=16, inner = m>=150;
     const st = {o:"pending", i1:"pending", i2:"pending", e:"pending"};
     const snap=()=>[
-      {label:"if age >= 16", state:st.o},
-      {label:"    if money >= 150", state:st.i1},
-      {label:"    else", state:st.i2},
-      {label:"else", state:st.e}
+      {label:"if age >= 16",       act:`print("Купуємо квиток")`,                 state:st.o},
+      {label:"if money >= 150",    act:`print("Купуємо квиток")`,                 state:st.i1},
+      {label:"else",               act:`print("Вік підходить, а грошей бракує")`, state:st.i2},
+      {label:"else",               act:`print("На цей сеанс замалий вік")`,       state:st.e}
     ];
     frames.push({line:1, vars, out:[], branches:snap(), note:`Маємо дві змінні. Спершу перевіряється лише зовнішня умова.`});
     st.o="check";
@@ -324,52 +555,52 @@ createPlayer(document.getElementById("cond-w-nested"), {
       note:`Зовнішній else так і не спрацював — його гілку взагалі не розглядали.`});
     return {code, frames};
   },
-  extra:(f)=>ladder(f.branches)
+  extra:flowOf(nestedFlow)
 });
 
 /* ================= hero ================= */
+/* Та сама схема, що й у віджетах, але без коду: бал змінюється з кожним
+   показом, тож видно обидві дороги. */
 (function(){
-  const box = document.getElementById("cond-heroLadder");
-  const val = document.getElementById("cond-heroValue");
+  const box  = document.getElementById("cond-heroFlow");
   const line = document.getElementById("cond-heroLine");
-  const btn = document.getElementById("cond-heroBtn");
-  const defs=[{label:"if score >= 90", n:90},{label:"elif score >= 75", n:75},{label:"elif score >= 60", n:60}];
-  const score = 82;
-  let t=null;
-  function draw(states){
-    box.innerHTML = defs.map((d,k)=>{
-      const s=states[k];
-      const v = s==="false"?"False" : s==="taken"?"True" : s==="check"?"перевіряємо…" : s==="skipped"?"не перевіряється":"";
-      return `<div class="br ${s}"><span>${d.label}</span><span class="verdict">${v}</span></div>`;
-    }).join("");
+  const btn  = document.getElementById("cond-heroBtn");
+  const CASES = [95, 42, 90, 71];
+  let n = 0, score = CASES[0], t = null, auto = null;
+
+  function draw(s1, s2, endState){
+    box.innerHTML = chainFlow(
+      [{label:"if score >= 90", act:`print("Відмінно")`, state:s1},
+       {label:"else", act:`print("Ще підтягнемось")`, state:s2, isElse:true}],
+      {start:`score = ${score}`, endState});
   }
   function run(){
-    clearInterval(t);
-    val.textContent = `score = ${score}`;
-    const states=["pending","pending","pending"];
-    draw(states); line.textContent = "Python читає умови згори вниз";
-    let k=0, phase=0;
-    t=setInterval(()=>{
-      if(k>=defs.length){ clearInterval(t); return; }
-      if(phase===0){ states[k]="check"; line.textContent=`${score} >= ${defs[k].n} ?`; draw(states); phase=1; return; }
-      const ok = score>=defs[k].n;
-      if(ok){
-        states[k]="taken";
-        for(let m=k+1;m<defs.length;m++) states[m]="skipped";
-        line.innerHTML = `перша істинна умова — решта <b>пропускається</b>`;
-        draw(states); clearInterval(t); return;
-      }
-      states[k]="false"; line.textContent = `${score} >= ${defs[k].n} → False, йдемо далі`;
-      draw(states); k++; phase=0;
+    clearTimeout(t);
+    score = CASES[n % CASES.length]; n++;
+    draw("pending","pending");
+    line.textContent = "Python підходить до розвилки";
+    t = setTimeout(()=>{
+      draw("check","pending");
+      line.textContent = `${score} >= 90 ?`;
+      t = setTimeout(()=>{
+        const ok = score >= 90;
+        draw(ok ? "taken" : "false", ok ? "skipped" : "taken");
+        line.innerHTML = ok
+          ? `<b>True</b> — програма звертає в гілку if`
+          : `<b>False</b> — гілка if пропускається, працює else`;
+        t = setTimeout(()=>{
+          draw(ok ? "taken" : "false", ok ? "skipped" : "taken", "taken");
+          line.innerHTML = `дороги знову сходяться: виконалась рівно <b>одна</b> гілка`;
+        }, 1100);
+      }, 1100);
     }, 900);
   }
   btn.onclick = run;
-  draw(["pending","pending","pending"]);
-  let auto = null;
+  draw("pending","pending");
   /* запуск і зупинку веде роутер — див. registerAnim */
   window.registerAnim({
     el: btn,
-    stop(){ clearInterval(t); t=null; clearTimeout(auto); auto=null; },
+    stop(){ clearTimeout(t); t=null; clearTimeout(auto); auto=null; },
     start(){ clearTimeout(auto); auto = setTimeout(run, 700); }
   });
 })();
