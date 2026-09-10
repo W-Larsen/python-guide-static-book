@@ -201,7 +201,7 @@ function createPlayerWith(root, spec, cfg){
         resetB=$("[data-reset]"), speedB=$("[data-speed]"),
         scrub=$("[data-scrub]"), ticksEl=$("[data-ticks]"), counter=$("[data-counter]");
 
-  let frames=[], code=[], idx=0, raf=null, acc=0, last=0, prevChips=null;
+  let frames=[], code=[], idx=0, raf=null, acc=0, last=0, prevChips=null, extraBuilt=false, curCfg={};
   let speedI = 1, touched = false, quiet = false;
   /* «ключ деталі → кадри, де вона активна» і «рядок коду → перший його кадр»:
      обидва індекси роблять сцену клікабельною (див. §пряма маніпуляція) */
@@ -228,7 +228,21 @@ function createPlayerWith(root, spec, cfg){
     noteEl.className = "note";                /* міряємо базовий вигляд */
     lockHeight(chipsEl, frames.map(chipsOf));
     lockHeight(noteEl,  frames.map(noteOf));
-    if(extraEl) lockHeight(extraEl, frames.map(f=>spec.extra(f)));
+    if(extraEl && spec.extra){
+      const htmlList = frames.map(f=>spec.extra(f));
+      /* Перемикачі форми (прямокутник/трикутник, break/continue…) міняють саму
+         структуру схеми, не лише поточний кадр. spec.sizeVariants перелічує
+         інші налаштування того самого перемикача, щоб висота бралась як
+         найбільша серед УСІХ його положень — тоді перехід між ними не сіпає
+         розмір, і твін у rebuild() лишається підстраховкою на решту випадків. */
+      if(spec.sizeVariants){
+        spec.sizeVariants(curCfg).forEach(variantCfg=>{
+          const vb = spec.build(variantCfg);
+          (vb.frames||[]).forEach(f=>htmlList.push(spec.extra(f)));
+        });
+      }
+      lockHeight(extraEl, htmlList);
+    }
   }
 
   /* ---------- індекси прямої маніпуляції ----------
@@ -275,7 +289,13 @@ function createPlayerWith(root, spec, cfg){
   }
 
   function rebuild(){
-    const built = spec.build(spec.readCfg ? spec.readCfg(root) : {});
+    /* Перемикач конфігурації (форма фігури, break/continue…) часто міняє саму
+       структуру схеми в .extra, а не лише її стан — висота стрибає разом з
+       нею. Перший рендер віджета не рахується: тут анімувати нема від чого. */
+    const prevH = (extraBuilt && extraEl) ? extraEl.getBoundingClientRect().height : 0;
+
+    curCfg = spec.readCfg ? spec.readCfg(root) : {};
+    const built = spec.build(curCfg);
     code = built.code || []; frames = built.frames || [];
     codeEl.innerHTML = code.map((l,k)=>`<span class="cl" data-l="${k}">${cfg.hl(l)||"&nbsp;"}</span>`).join("");
     /* без кадрів render() впав би на f.line — глушимо керування, а не віджет */
@@ -294,6 +314,25 @@ function createPlayerWith(root, spec, cfg){
     buildTicks();
     lockAll();
     render();
+    if(extraEl && spec.extra){
+      if(extraBuilt) animateExtraResize(prevH);
+      extraBuilt = true;
+    }
+  }
+
+  /* Твін висоти .extra між старою й новою структурою схеми: без нього зміна
+     форми фігури чи режиму break/continue сіпає весь текст під віджетом. */
+  function animateExtraResize(prevH){
+    if(MO.reduced || prevH <= 0 || !extraEl.animate) return;
+    const newH = extraEl.getBoundingClientRect().height;
+    if(Math.abs(newH - prevH) < 1) return;
+    extraEl.classList.add("is-resizing");
+    const anim = extraEl.animate(
+      [{height: prevH+"px"}, {height: newH+"px"}],
+      {duration: 260, easing: "cubic-bezier(.32,.72,.28,1)"}
+    );
+    const done = () => extraEl.classList.remove("is-resizing");
+    anim.finished.then(done, done);
   }
 
   function render(){
