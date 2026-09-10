@@ -178,12 +178,27 @@
   .seg button[aria-pressed=true]{background:var(--ink); color:var(--card)}
 
   .panes{display:grid; grid-template-columns:1.1fr .9fr; background:var(--card)}
-  @media (max-width:680px){ .panes{grid-template-columns:1fr} }
   /* min-width:0 — інакше довгий рядок коду розпирає колонку сітки і на вузькому
      екрані з'являється горизонтальна прокрутка всієї сторінки замість самого pre */
-  .pane{padding:16px; min-width:0}
+  .pane{padding:16px; min-width:0; background:var(--card)}
   .pane+.pane{border-left:1px solid var(--rule-soft); background:var(--panel)}
-  @media (max-width:680px){ .pane+.pane{border-left:0; border-top:1px solid var(--rule-soft)} }
+
+  /* На вузькому екрані колонки й так стають рядками — а схема/сітка з .extra
+     раніше опинялась під обома, тобто під кодом ще й під змінними/виводом.
+     Гортати до неї доводилось повз усе це, і код зі схемою на екрані ніколи
+     не збігались. display:contents розбирає .panes на окремі елементи
+     .widget, і order зводить код і схему в сусідів: код → схема → змінні/вивід. */
+  @media (max-width:680px){
+    .widget{display:flex; flex-direction:column}
+    .panes{display:contents}
+    .pane{order:1}
+    .pane+.pane{border-left:0; border-top:1px solid var(--rule-soft); order:3}
+    .extra{order:2}
+    .w-config{order:0}
+    .legend{order:4}
+    .note{order:5}
+    .controls{order:6}
+  }
   .pane-title{font-family:var(--sans); font-size:.78rem; font-weight:600; color:var(--muted);
     margin-bottom:9px}
   .pane-title+.chips{margin-bottom:14px}
@@ -227,6 +242,10 @@
   /* ---------- extras ---------- */
   .extra{padding:14px 16px; border-top:1px solid var(--rule-soft); background:var(--card);
     position:relative}
+  /* Перемикання конфігурації (наприклад форми фігури для вкладених циклів)
+     часто міняє саму структуру схеми — і разом з нею її висоту. Замість
+     миттєвого стрибка rebuild() у collkit.js програє цю зміну як твін висоти. */
+  .extra.is-resizing{overflow:hidden}
   /* деталі сцени — теж перемотка: клік веде на наступний кадр, де деталь активна.
      Клас jump ставить програвач лише тим деталям, які десь справді активні. */
   .extra [data-key].jump,.chips [data-key].jump{cursor:pointer}

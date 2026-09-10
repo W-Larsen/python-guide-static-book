@@ -309,6 +309,9 @@ createPlayer(document.getElementById("loops-w-flow"), {
       <button data-mode="continue" aria-pressed="false">continue</button>
     </span>`,
   readCfg:(r)=>({mode:modeCfg(r)}),
+  /* break і continue ведуть по різних дорогах після ромба, тому схеми не
+     однакової висоти — рахуємо обидві, щоб перемикач не сіпав розмір. */
+  sizeVariants:()=>[{mode:"break"},{mode:"continue"}],
   build:({mode})=>{
     const out=[], frames=[];
     /* базовий стан схеми: цикл уже зайшов у тіло, решта — залежно від кадру */
@@ -382,6 +385,10 @@ createPlayer(document.getElementById("loops-w-nested"), {
     a:numCfg(r,"#loops-ns-out",3),
     b:numCfg(r,"#loops-ns-in",4)
   }),
+  /* Трикутник і множення додають/забирають вузол (tail), тому висота схеми
+     різниться між режимами. Рахуємо всі три при поточних a/b, щоб перемикач
+     форми не сіпав розмір — тільки зміна a чи b перебудовує заново. */
+  sizeVariants:({a,b})=>["rect","tri","mult"].map(mode=>({mode,a,b})),
   build:({mode,a,b})=>{
     const out=[], frames=[];
     const vI=(i)=>({name:"i",val:i,cls:"i"});
@@ -400,7 +407,7 @@ createPlayer(document.getElementById("loops-w-nested"), {
     }
 
     const grid = {a, rows, i:-1, j:-1, done:new Set(), mode};
-    const snap = (i,j)=>({a, rows, i, j, done:new Set(grid.done), mode});
+    const snap = (i,j)=>({a, b, rows, i, j, done:new Set(grid.done), mode});
     /* стан схеми: src — те, що перебирає зовнішній цикл, body — рядок тіла */
     const fl = (o)=>Object.assign({
       src: mode==="mult" ? `range(1, ${a+1})` : `range(${a})`,
@@ -479,7 +486,13 @@ createPlayer(document.getElementById("loops-w-nested"), {
     }
     html += `</div>`;
     const s = f.flow;
-    return `<div class="vizsplit"><div>${html}</div>` + flowbox(nestFlow({
+    /* Трикутник рахує стовпці лише через i (до a), прямокутник і множення —
+       через j (до b), тож сітка сама по собі вужча чи ширша залежно від
+       режиму. Без цього резерву звільнене місце діставалось схемі — вона
+       ширшала й через це «роздувалась» при самому лише перемиканні форми. */
+    const reserveCols = Math.max(g.a, g.b) + 1;
+    const reserveW = reserveCols*34 + (reserveCols-1)*6;
+    return `<div class="vizsplit"><div style="min-width:${reserveW}px">${html}</div>` + flowbox(nestFlow({
       start:s.src,
       outer:"є ще i ?", outerTake:"i = наступне значення",
       inner:"є ще j ?", innerTake:"j = наступне значення",
